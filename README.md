@@ -1,102 +1,94 @@
 # PCL Legacy2
 
-Tests whether the URTC paper's finding (label-free selection criteria —
-reconstruction error, physiology-constraint violation — beat OOD-blind
-baselines) generalizes across clinical tasks, beyond the single sepsis task
-URTC covered. Co-developed with AI club members.
+Tests whether a prior finding — that label-free criteria computed on
+unlabeled target-site data (reconstruction error, physiology-constraint
+violation) can substitute for labeled out-of-distribution (OOD) validation
+when selecting which trained model to deploy, and that a physiology-
+constrained pretraining objective (PCL) improves cross-hospital transfer —
+generalizes beyond the single clinical task (sepsis onset) it was
+originally established on.
 
-Target: **ML4H 2026 Findings track**, deadline Sept 10 2026 11:59 PM AoE.
-(Originally scoped as Proceedings; switched to Findings once mortality's
-result came in — see Status below. This was a deliberate call, not a
-downgrade: two well-diagnosed results with a cross-validated mechanism beat
-a rushed third task.)
+Two further tasks, chosen for different output structure: in-hospital
+mortality (static binary) and length-of-stay (LOS, continuous). Same
+pretrained encoders reused as-is across both (no retraining), across
+MIMIC-IV, eICU-CRD, and PhysioNet 2019.
 
-This repo was split out of a shared PCL monorepo on 2026-09-10. `config.py`,
-`src/`, and `pod_monitor.py` are vendored copies from that split (see
-[VENDORED.md](VENDORED.md)), not shared code — this repo is self-contained.
+This repo was split out of a shared PCL monorepo. `config.py`, `src/`, and
+`pod_monitor.py` are vendored copies of the model/training/loss
+implementation from that split (see [VENDORED.md](VENDORED.md)) — this repo
+is self-contained; nothing here imports from outside it.
 
-## Status: paper drafted, reviewed, ready for submission
+## Result summary
 
-Both planned tasks are complete. Decompensation was deliberately not
-attempted (scope decision under time constraint, not an omission — see
-Limitations in the paper).
+- **Mortality**: PCL is the worst-performing method (lowest AUROC in every
+  one of 18 fine-tune runs — 3 methods × 2 transfer directions × 3 seeds),
+  the same ranking the prior work found after correcting its own original
+  evaluation confounds, not the pre-correction ranking.
+- **LOS**: all three methods collapse hard zero-shot on MIMIC-IV/eICU-CRD
+  (near-zero or negative $R^2$) — traced to a label-distribution mismatch
+  (the pretraining source's length-of-stay range is far narrower than the
+  target sites') rather than a representation-quality problem. PCL still
+  trends worst, significant in some paired-by-seed comparisons at $n=3$,
+  but an order of magnitude smaller than the shared collapse.
+- **Selection criteria**: violation and reconstruction error remain
+  reliable predictors of true OOD performance across both tasks.
+  Representation-distance criteria (a representation centroid distance,
+  and MMD) fail specifically when the underlying shift is a label-scale
+  mismatch rather than a representation-space one — a boundary condition
+  for when to trust that class of detector at all. Pooling a criterion's
+  values across evaluation domains of different true difficulty before
+  checking correlation can flip its apparent reliability entirely
+  (Simpson's paradox); every correlation reported here is computed
+  within-domain for this reason.
 
-- **Mortality** (static binary): 18 fine-tune runs (ERM/PCL/DRO × 2
-  directions × 3 seeds, both directions needed since PhysioNet has no
-  mortality label) + 18 selection-criteria runs. **PCL is the worst method**,
-  consistently — same ranking as URTC's own corrected sepsis result, not
-  the pre-correction one.
-- **LOS** (continuous): 9 fine-tune runs (single-source PhysioNet-A
-  protocol, matching URTC exactly) + 27 selection-criteria cells. Zero-shot
-  collapses hard on MIMIC-IV/eICU-CRD (a label-distribution mismatch —
-  PhysioNet's training LOS range is far narrower — not a representation
-  problem); PCL trends worst there too, in the comparisons that reach
-  significance at $n=3$.
-- All fine-tune runs, selection-criteria runs, and significance tests are
-  paired-by-seed and independently re-verified against the raw per-seed
-  data (not just aggregated means) before being cited in the paper.
+Full write-up: [`../ml4h_PAPERS/Legacy2PCL Paper/main.tex`](../ml4h_PAPERS/Legacy2PCL%20Paper/main.tex)
+(compiled `main.pdf` alongside it). Narrative results summary:
+[`results/SUMMARY.md`](results/SUMMARY.md). Raw per-run data every number in
+the paper traces back to: `results/mortality/*.json`, `results/los/*.json`.
 
-**Paper**: [`ml4h_PAPERS/Legacy2PCL Paper/main.tex`](../ml4h_PAPERS/Legacy2PCL%20Paper/main.tex)
-(compiled `main.pdf` alongside it). Compiles clean, zero LaTeX warnings,
-main body fits the 4-page Findings limit with the reference list and full
-per-seed appendix tables starting on page 5+ (free, don't count against the
-limit).
+## Reproducing this
 
-**Results data**: [`results/SUMMARY.md`](results/SUMMARY.md) for the
-narrative version; `results/mortality/*.json` and `results/los/*.json` for
-the raw per-run data every number in the paper traces back to.
+1. **Checkpoints and data.** Requires the pretrained ERM/PCL/DRO encoders
+   (`results_lambda17/ckpt/{erm,pcl,dro}_pretrained.pt`, not included in
+   this repo — see Data and Code Availability in the paper) and credentialed
+   access to PhysioNet 2019, MIMIC-IV, and eICU-CRD. No retraining or
+   re-preprocessing is done; only a task-specific head and a two-phase
+   unfreezing schedule are fine-tuned per (task, method, seed).
+2. **Mortality** (`scripts/finetune_mortality.py`): PhysioNet 2019 has no
+   mortality label, so both directions are run — MIMIC-IV→eICU-CRD and
+   eICU-CRD→MIMIC-IV, 3 seeds each. Note: eICU-CRD's raw `mortality` field
+   is ICU-unit-level, not hospital-level like MIMIC-IV's; the field actually
+   used here, `mortality_hospital`, corrects for that (see
+   `src/data/eicu.py`).
+3. **LOS** (`scripts/finetune_los.py`): PhysioNet does have a valid
+   continuous LOS field, so this uses a single-source protocol instead —
+   train on PhysioNet Site A, zero-shot evaluate on Site B, MIMIC-IV, and
+   eICU-CRD, 3 seeds. Regresses $\log(1+\text{hours})$ with MSE loss;
+   evaluation metrics are all computed back in raw hours, never log-space.
+4. **Selection-criteria comparison** (`scripts/selection_criteria_mortality.py`,
+   `scripts/selection_criteria_los.py`): inference-only, no training.
+   Computes violation, reconstruction error, representation distance, and
+   MMD for every fine-tuned checkpoint against every zero-shot target; also
+   entropy and ATC for mortality (both inapplicable to LOS's continuous
+   target — no standard analog, so omitted rather than forced).
+5. **Significance check** (`scripts/significance_check.py`): paired-by-seed
+   t-tests ($n=3$, $df=2$) for the method-difference claims in the paper.
+   Pure Python/NumPy, no GPU or model needed — reads only the saved result
+   JSONs.
 
-## Authorship — still genuinely unresolved, flagging again
+Every script is resumable (skips a run if its result JSON already exists)
+and calls `pod_monitor.watch_pod()` before loading data, which prints a
+loud banner if the GPU sits idle for several minutes (data loading is
+CPU-bound; don't pay GPU-pod prices for it) or resumes activity after being
+idle (switch back up).
 
-Spec originally listed Dr. Lin as co-author (same as URTC), but this became
-a group effort with AI club members contributing partway through. Who is
-author vs. contributor was flagged as needing a decision **before
-submission, not left open until then** — and per `PROJECTS.md`, it still
-hasn't been decided as of this writing, on submission day. This needs to be
-settled before the OpenReview submission is created, since author list
-isn't easily changed after.
+## Known limitations (stated plainly, see the paper's Limitations section
+for the full list)
 
-## What was actually done (steps 1-6, both tasks)
-
-1. Located + verified the real trained ERM/PCL/DRO checkpoints on the RunPod
-   network volume (`results_lambda17/ckpt/` — took several rounds to
-   confirm after some early false leads from a different agent's wrong
-   directory map). Reused as-is, no retraining, no re-preprocessing.
-2. Mortality and LOS task labels added, with two real field-definition bugs
-   caught and fixed before they touched a number: eICU-CRD's `mortality`
-   field is ICU-unit-level, not hospital-level like MIMIC-IV's (fixed by
-   adding `mortality_hospital`, not editing the shared field in place, so
-   `reboot`'s already-published detector results stayed untouched); a
-   `_cached_load` fraction-kwarg collision and a stale-empty-cache trap that
-   would have silently zero-filled `los_h`.
-3. Fine-tuned only (frozen pretrained encoder, two-phase unfreezing head)
-   per task × method × 3 seeds, matching URTC's protocol.
-4. Extended URTC's selection-criteria comparison with ATC and MMD. Entropy
-   and ATC turned out inapplicable to LOS's continuous target (no standard
-   analog) — reported as N/A rather than forced.
-5. Checked the encoder-bias confound (reconstruction-error ranking tracking
-   masked-prediction reliance vs. physiology specifically): underpowered for
-   mortality at $n=3$, not run for LOS where there's even less real
-   between-method effect to confound — reported honestly as inconclusive/
-   not attempted rather than forced.
-6. Categorized by output structure: mortality (static binary) fails via a
-   method-specific effect; LOS (continuous) fails via a label-distribution
-   mismatch that dwarfs the method effect. That contrast is the paper's
-   actual throughline, not "does PCL win."
-
-Decompensation (dense time-series, Harutyunyan et al. definition) was never
-started — correctly deferred per the original gate ("don't start it early"),
-then deliberately dropped from scope once Findings was chosen.
-
-## Pod-switch monitor
-
-`finetune_mortality.py`/`finetune_los.py` (and every new script in this
-project) call `watch_pod()` from `pod_monitor.py` (vendored at repo root)
-right before the data-loading phase starts. It watches `nvidia-smi` and
-prints a loud banner in either direction: sustained GPU idle (data
-loading on an expensive pod — switch down) or sustained GPU activity
-resuming after idle (training started — switch back up). No-ops safely
-with no GPU. Add the same two lines
-(`sys.path.insert(0, _LEGACY2_ROOT)` +
-`from pod_monitor import watch_pod; watch_pod(verbose=True)`) to any new
-script in this project, before whichever step loads the datasets.
+Three seeds per task is a small evidence base for the significance claims
+made ($df=2$ throughout). The encoder-bias confound check (whether
+reconstruction-error ranking merely tracks masked-prediction reliance
+rather than physiology specifically) was underpowered for mortality and not
+attempted for LOS. A third task (decompensation, dense time-series output,
+Harutyunyan et al. definition) was scoped but never started — a deliberate
+decision under time constraint, not an omitted result.
