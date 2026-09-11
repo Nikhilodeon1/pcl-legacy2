@@ -13,7 +13,8 @@ Reuses the pretrained ERM/PCL/DRO encoders as-is, same as finetune_mortality.py
 run_finetuning_regression / evaluate_model_regression (evaluate_utils.py) —
 MSE loss on log1p(los_h), MAE/RMSE/R^2 eval — since there's no AUROC equivalent
 for a continuous target. Those are new, additive functions; the existing
-binary run_finetuning/evaluate_model (shared with chat1_protocol) are untouched.
+binary run_finetuning/evaluate_model (vendored from the reboot project's src/,
+see VENDORED.md) are untouched.
 
 IMPORTANT — separate cache dir from mortality's: mortality's cache
 (results/mortality/cache/{mimic,eicu}_frac1.0.pkl) predates the `los_h` field
@@ -39,14 +40,11 @@ os.environ["PCL_TEST_MODE"] = "0"  # see finetune_mortality.py — must precede 
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-_REPO_ROOT = os.path.dirname(_LEGACY2_ROOT)
-_CHAT1 = os.path.join(_REPO_ROOT, "chat1_protocol")
-sys.path.insert(0, _CHAT1)
-sys.path.insert(0, _REPO_ROOT)  # for pod_monitor.py
+sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
 
 PRETRAIN_CKPT_DIR = os.environ.get(
     "PCL_LEGACY2_PRETRAIN_DIR",
-    os.path.join(_REPO_ROOT, "results_lambda17", "ckpt"),
+    os.path.join(_LEGACY2_ROOT, "results_lambda17", "ckpt"),
 )
 
 OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", "los")

@@ -7,10 +7,10 @@ against the 18 already-fine-tuned mortality checkpoints, plus the two new
 required baselines: ATC and MMD (both inference-time only, no new training).
 
 NOT importing gate_check.py directly: its own top-level sys.path.insert(0, ...)
-points at _archive/, which would shadow chat1_protocol's src/ with the
-un-fixed copy (dropping mortality_hospital again, silently). The scoring
-logic is reimplemented here against chat1_protocol/src instead — see
-../README.md and src/data/dataset.py for why that matters.
+points at the frozen pre-split archive, which would shadow this repo's
+vendored src/ with the un-fixed copy (dropping mortality_hospital again,
+silently). The scoring logic is reimplemented here against this repo's own
+src/ instead — see VENDORED.md and src/data/dataset.py for why that matters.
 
 Step 5 (encoder-bias confound): recon_mse is a physiology-agnostic signal —
 plain masked-reconstruction error. ERM and DRO never saw the physiology
@@ -43,10 +43,7 @@ os.environ["PCL_TEST_MODE"] = "0"  # see finetune_mortality.py for why this must
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-_REPO_ROOT = os.path.dirname(_LEGACY2_ROOT)
-_CHAT1 = os.path.join(_REPO_ROOT, "chat1_protocol")
-sys.path.insert(0, _CHAT1)
-sys.path.insert(0, _REPO_ROOT)
+sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
 
 RESULTS_DIR = os.path.join(_LEGACY2_ROOT, "results", "mortality")
 FT_CKPT_DIR = os.path.join(RESULTS_DIR, "ckpt")

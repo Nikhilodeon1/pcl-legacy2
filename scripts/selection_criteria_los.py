@@ -42,10 +42,7 @@ os.environ["PCL_TEST_MODE"] = "0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-_REPO_ROOT = os.path.dirname(_LEGACY2_ROOT)
-_CHAT1 = os.path.join(_REPO_ROOT, "chat1_protocol")
-sys.path.insert(0, _CHAT1)
-sys.path.insert(0, _REPO_ROOT)
+sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
 
 RESULTS_DIR = os.path.join(_LEGACY2_ROOT, "results", "los")
 FT_CKPT_DIR = os.path.join(RESULTS_DIR, "ckpt")

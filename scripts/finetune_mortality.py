@@ -43,18 +43,15 @@ os.environ["PCL_TEST_MODE"] = "0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-_REPO_ROOT = os.path.dirname(_LEGACY2_ROOT)
-_CHAT1 = os.path.join(_REPO_ROOT, "chat1_protocol")
-sys.path.insert(0, _CHAT1)
-sys.path.insert(0, _REPO_ROOT)  # for pod_monitor.py, shared across all PCL sub-projects
+sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
 
 # Where the real URTC-era pretrained encoders live — confirmed on the pod
 # (13MB each, full-scale, task=sepsis pretraining objective; pretraining
 # is task-agnostic per README so that's fine to reuse for mortality).
-# Override via env var if the pod ever reorganizes this.
+# Override via env var to point at the pod's actual location.
 PRETRAIN_CKPT_DIR = os.environ.get(
     "PCL_LEGACY2_PRETRAIN_DIR",
-    os.path.join(_REPO_ROOT, "results_lambda17", "ckpt"),
+    os.path.join(_LEGACY2_ROOT, "results_lambda17", "ckpt"),
 )
 
 OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", "mortality")

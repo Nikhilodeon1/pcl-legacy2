@@ -1,1 +1,4 @@
-results/los/ckpt/dro_s42.pt
+__pycache__/
+*.py[cod]
+*.pkl
+results/*/cache/
