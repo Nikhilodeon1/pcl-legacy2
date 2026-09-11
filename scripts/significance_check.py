@@ -32,7 +32,11 @@ T_CRIT_DF2 = 4.303  # two-tailed alpha=0.05, df=2 (n=3 paired samples)
 
 
 def paired_ttest(a, b):
-    """a, b: sequences of matched (same-seed) values. Returns (mean_diff, t, df)."""
+    """a, b: sequences of matched (same-seed) values. Returns (mean_diff, sd,
+    t, df, cohen_d, diffs). cohen_d = mean_diff / sd (of the paired
+    differences) -- the effect-size figure cited alongside every t-stat in
+    the paper, since t alone conflates effect size with sample size and n=3
+    barely has a sample size to speak of."""
     d = np.asarray(a, float) - np.asarray(b, float)
     n = len(d)
     df = n - 1
@@ -40,9 +44,11 @@ def paired_ttest(a, b):
     sd_d = d.std(ddof=1) if n > 1 else 0.0
     if sd_d == 0:
         t = float("inf") if mean_d != 0 else 0.0
+        cohen_d = float("inf") if mean_d != 0 else 0.0
     else:
         t = mean_d / (sd_d / np.sqrt(n))
-    return mean_d, t, df, d.tolist()
+        cohen_d = mean_d / sd_d
+    return mean_d, sd_d, t, df, cohen_d, d.tolist()
 
 
 def verdict(t, df):
@@ -71,13 +77,13 @@ def check_mortality():
         methods_present = sorted(set(k[1] for k in rows if k[0] == direction))
         per_method = {m: [rows[(direction, m)][s] for s in seeds] for m in methods_present}
         for m in methods_present:
-            print(f"  {m:4s} per-seed AUROC: {[round(v, 4) for v in per_method[m]]}")
-        for other in ("erm", "dro"):
-            if other not in per_method or "pcl" not in per_method:
+            print(f"  {m:4s} per-seed AUROC: {[round(v, 6) for v in per_method[m]]}")
+        for a, b in [("pcl", "erm"), ("pcl", "dro"), ("erm", "dro")]:
+            if a not in per_method or b not in per_method:
                 continue
-            mean_d, t, df, diffs = paired_ttest(per_method["pcl"], per_method[other])
-            print(f"  PCL - {other.upper()}: per-seed diffs={[round(x,4) for x in diffs]} "
-                  f"mean={mean_d:+.4f}  t={t:+.3f}  {verdict(t, df)}")
+            mean_d, sd_d, t, df, cohen_d, diffs = paired_ttest(per_method[a], per_method[b])
+            print(f"  {a.upper()} - {b.upper()}: per-seed diffs={[round(x,6) for x in diffs]} "
+                  f"mean={mean_d:+.6f}  sd={sd_d:.6f}  t={t:+.3f}  d={cohen_d:+.2f}  {verdict(t, df)}")
 
 
 def check_los():
@@ -102,14 +108,14 @@ def check_los():
         print(f"\n-- {target} (seeds={seeds}) --")
         per_method = {m: [rows[(target, m)][s] for s in seeds] for m in methods_present}
         for m in methods_present:
-            print(f"  {m:4s} per-seed R^2: {[round(v, 4) for v in per_method[m]]}")
-        pairs = [("erm", "pcl"), ("erm", "dro"), ("pcl", "dro")]
+            print(f"  {m:4s} per-seed R^2: {[round(v, 6) for v in per_method[m]]}")
+        pairs = [("pcl", "erm"), ("pcl", "dro"), ("erm", "dro")]
         for a, b in pairs:
             if a not in per_method or b not in per_method:
                 continue
-            mean_d, t, df, diffs = paired_ttest(per_method[a], per_method[b])
-            print(f"  {a.upper()} - {b.upper()}: per-seed diffs={[round(x,4) for x in diffs]} "
-                  f"mean={mean_d:+.4f}  t={t:+.3f}  {verdict(t, df)}")
+            mean_d, sd_d, t, df, cohen_d, diffs = paired_ttest(per_method[a], per_method[b])
+            print(f"  {a.upper()} - {b.upper()}: per-seed diffs={[round(x,6) for x in diffs]} "
+                  f"mean={mean_d:+.6f}  sd={sd_d:.6f}  t={t:+.3f}  d={cohen_d:+.2f}  {verdict(t, df)}")
 
 
 if __name__ == "__main__":
