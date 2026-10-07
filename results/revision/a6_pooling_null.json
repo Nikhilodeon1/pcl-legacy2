@@ -1,0 +1,58 @@
+{
+ "rows": [
+  {
+   "signal": "violation",
+   "pooled_obs": -0.1984126984126984,
+   "null_mean": -0.045591025641025636,
+   "null_lo": -0.1807234432234432,
+   "null_hi": 0.08669108669108669,
+   "inside_band": false,
+   "frac_null_abs_ge_obs": 0.0127,
+   "within_physionet_b": -0.7166666666666667,
+   "within_mimic": -0.31666666666666665,
+   "within_eicu": -0.45
+  },
+  {
+   "signal": "recon_mse",
+   "pooled_obs": -0.3742368742368742,
+   "null_mean": -0.1712899877899878,
+   "null_lo": -0.3028083028083028,
+   "null_hi": -0.03968253968253968,
+   "inside_band": false,
+   "frac_null_abs_ge_obs": 0.0003,
+   "within_physionet_b": -0.7333333333333334,
+   "within_mimic": -0.5499999999999999,
+   "within_eicu": -0.6
+  },
+  {
+   "signal": "repr_dist",
+   "pooled_obs": 0.8956043956043956,
+   "null_mean": 0.8350736263736263,
+   "null_lo": 0.7722832722832721,
+   "null_hi": 0.898046398046398,
+   "inside_band": true,
+   "frac_null_abs_ge_obs": 0.0303,
+   "within_physionet_b": 0.33333333333333337,
+   "within_mimic": 0.6333333333333333,
+   "within_eicu": 0.33333333333333337
+  },
+  {
+   "signal": "mmd",
+   "pooled_obs": 0.8876678876678876,
+   "null_mean": 0.8846103174603175,
+   "null_lo": 0.8382173382173382,
+   "null_hi": 0.9297924297924297,
+   "inside_band": true,
+   "frac_null_abs_ge_obs": 0.4507,
+   "within_physionet_b": -0.3,
+   "within_mimic": 0.35,
+   "within_eicu": 0.016666666666666666
+  }
+ ],
+ "H5_inside_band": {
+  "repr_dist": true,
+  "mmd": true
+ },
+ "H5_met": true,
+ "n_shuffles": 10000
+}

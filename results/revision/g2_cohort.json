@@ -1,0 +1,102 @@
+{
+ "cohorts": [
+  {
+   "dataset": "physionet_a",
+   "stays": 10381,
+   "patients": 10381,
+   "stays_per_patient_max": 1,
+   "frac_patients_multi_stay": 0.0,
+   "los_mean_h": 46.173971679028995,
+   "los_median_h": 43.0,
+   "los_p99_h": 168.20000000000073,
+   "los_max_h": 336.0,
+   "los_min_h": 24.0,
+   "frac_los_lt_48h": 0.6648685097774781
+  },
+  {
+   "dataset": "physionet_b",
+   "stays": 14779,
+   "patients": 14779,
+   "stays_per_patient_max": 1,
+   "frac_patients_multi_stay": 0.0,
+   "los_mean_h": 45.25218215034847,
+   "los_median_h": 42.0,
+   "los_p99_h": 157.21999999999935,
+   "los_max_h": 336.0,
+   "los_min_h": 24.0,
+   "frac_los_lt_48h": 0.6888152107720414
+  },
+  {
+   "dataset": "mimic",
+   "stays": 18650,
+   "patients": 16755,
+   "stays_per_patient_max": 10,
+   "frac_patients_multi_stay": 0.08815279021187705,
+   "los_mean_h": 104.56870926422401,
+   "los_median_h": 59.51916666666668,
+   "los_p99_h": 675.7938944444398,
+   "los_max_h": 3068.838611111111,
+   "los_min_h": 24.005555555555553,
+   "frac_los_lt_48h": 0.3839142091152815,
+   "mortality_hospital_prev": 0.1188739946380697,
+   "n_deaths": 2217
+  },
+  {
+   "dataset": "eicu",
+   "stays": 32620,
+   "patients": 30265,
+   "stays_per_patient_max": 7,
+   "frac_patients_multi_stay": 0.0675698000991244,
+   "los_mean_h": 90.28146127120375,
+   "los_median_h": 55.4,
+   "los_p99_h": 539.4508333333334,
+   "los_max_h": 2539.9166666666665,
+   "los_min_h": 24.0,
+   "frac_los_lt_48h": 0.41676885346413245,
+   "mortality_hospital_prev": 0.09239730226854691,
+   "n_deaths": 3014
+  }
+ ],
+ "split_overlap": {
+  "mimic": {
+   "val_stays": 3730,
+   "val_stays_whose_patient_in_train": 563,
+   "frac": 0.1509383378016086,
+   "note": "split is by STAY (sample index), not patient; fraction is at the cache subsample (frac<1 understates overlap because sibling stays are subsampled away)"
+  },
+  "eicu": {
+   "val_stays": 6524,
+   "val_stays_whose_patient_in_train": 758,
+   "frac": 0.11618638871857756,
+   "note": "split is by STAY (sample index), not patient; fraction is at the cache subsample (frac<1 understates overlap because sibling stays are subsampled away)"
+  }
+ },
+ "facts": {
+  "window": "first 48 hourly bins from ICU admission (intime / offset 0); stays <48h are padded after discharge",
+  "inclusion": "adults (age>=18), ICU LOS >= 24h (MIN_LOS_H=24), >=1 hour in which ALL hemodynamic variables observed (has_hemodynamic_window); PhysioNet: len(df)>=24 and non-empty and hemodynamic window",
+  "los_definition": {
+   "physionet": "len(df) hourly rows (hours from ICU admission to last record)",
+   "mimic": "icustays.los*24 (ICU stay, hours)",
+   "eicu": "unitdischargeoffset/60 (ICU unit stay, hours)"
+  },
+  "mortality_definition": {
+   "mimic": "admissions.hospital_expire_flag (hospital)",
+   "eicu": "patient.hospitaldischargestatus=='Expired' (hospital)",
+   "physionet": "not available"
+  },
+  "prediction_time": "end of hour 48 (or end of stay if shorter) -- outcome (LOS / in-hospital death) is NOT yet known, but for stays <48h the window already spans the whole stay",
+  "variables": "17 (9 core + 8 expanded) -- see src/data/variables.py",
+  "normalization": "MinMaxNormalizer: FIXED affine map from clinical plausibility bounds (PLAUS); fit() is a no-op; no statistics derived from any split",
+  "imputation": "hourly median bin; forward-fill gap limit 6h; remaining missing -> 0 with observation mask as separate input",
+  "split_unit_mortality": "stratified random split of STAYS (make_patient_split_loaders despite name), 80/20, seed = fine-tune seed",
+  "split_unit_los": "random permutation of PhysioNet-A stays (= patients), 80/20, seed = fine-tune seed",
+  "repeated_admissions": "no de-duplication to one stay per patient in MIMIC/eICU"
+ },
+ "caches": {
+  "pn_frac": 1.0,
+  "mimic_frac": 0.25,
+  "eicu_frac": 0.25,
+  "seed": 42,
+  "eicu_dir": null
+ }
+}

@@ -1,0 +1,123 @@
+{
+ "H2": {
+  "le336.erm.mimic": {
+   "far_r2": -0.12793748072465064,
+   "pn_b_r2": 0.22859615622590632,
+   "ge0": false,
+   "within_0p15": false,
+   "ok": false
+  },
+  "le336.erm.eicu": {
+   "far_r2": -0.14878215241163675,
+   "pn_b_r2": 0.22859615622590632,
+   "ge0": false,
+   "within_0p15": false,
+   "ok": false
+  },
+  "le336.pcl.mimic": {
+   "far_r2": -0.15642966775228317,
+   "pn_b_r2": 0.20816746559920984,
+   "ge0": false,
+   "within_0p15": false,
+   "ok": false
+  },
+  "le336.pcl.eicu": {
+   "far_r2": -0.17751234315409134,
+   "pn_b_r2": 0.20816746559920984,
+   "ge0": false,
+   "within_0p15": false,
+   "ok": false
+  },
+  "le336.dro.mimic": {
+   "far_r2": -0.1432948839496547,
+   "pn_b_r2": 0.2246400178169602,
+   "ge0": false,
+   "within_0p15": false,
+   "ok": false
+  },
+  "le336.dro.eicu": {
+   "far_r2": -0.16610544835929844,
+   "pn_b_r2": 0.2246400178169602,
+   "ge0": false,
+   "within_0p15": false,
+   "ok": false
+  },
+  "label_matched.erm.mimic": {
+   "far_r2": 0.12747295505878098,
+   "pn_b_r2": 0.22886554797107705,
+   "ge0": true,
+   "within_0p15": true,
+   "ok": true
+  },
+  "label_matched.erm.eicu": {
+   "far_r2": 0.07238339121064531,
+   "pn_b_r2": 0.22886554797107705,
+   "ge0": true,
+   "within_0p15": false,
+   "ok": false
+  },
+  "label_matched.pcl.mimic": {
+   "far_r2": 0.1190403316202356,
+   "pn_b_r2": 0.20775677593659245,
+   "ge0": true,
+   "within_0p15": true,
+   "ok": true
+  },
+  "label_matched.pcl.eicu": {
+   "far_r2": 0.05656481001795608,
+   "pn_b_r2": 0.20775677593659245,
+   "ge0": true,
+   "within_0p15": false,
+   "ok": false
+  },
+  "label_matched.dro.mimic": {
+   "far_r2": 0.11608676396822355,
+   "pn_b_r2": 0.22486472103765376,
+   "ge0": true,
+   "within_0p15": true,
+   "ok": true
+  },
+  "label_matched.dro.eicu": {
+   "far_r2": 0.057887328450774156,
+   "pn_b_r2": 0.22486472103765376,
+   "ge0": true,
+   "within_0p15": false,
+   "ok": false
+  }
+ },
+ "H2b": {
+  "erm.mimic": {
+   "spearman": 0.6710497797150051,
+   "r2": -0.11837071805992509,
+   "satisfied": true
+  },
+  "erm.eicu": {
+   "spearman": 0.44021064384420455,
+   "r2": -0.1208031485898126,
+   "satisfied": true
+  },
+  "pcl.mimic": {
+   "spearman": 0.7153718400169561,
+   "r2": -0.13034760316890281,
+   "satisfied": true
+  },
+  "pcl.eicu": {
+   "spearman": 0.470476862663489,
+   "r2": -0.13409774190795284,
+   "satisfied": true
+  },
+  "dro.mimic": {
+   "spearman": 0.6296200544737142,
+   "r2": -0.12438892578305276,
+   "satisfied": true
+  },
+  "dro.eicu": {
+   "spearman": 0.38218479208302353,
+   "r2": -0.12861171246687367,
+   "satisfied": true
+  }
+ },
+ "H2_met": false,
+ "H2b_cells_satisfied": 6,
+ "H2b_cells_total": 6
+}

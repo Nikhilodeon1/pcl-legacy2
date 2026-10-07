@@ -2,3 +2,11 @@ __pycache__/
 *.py[cod]
 *.pkl
 results/*/cache/
+
+# revision outputs: large or regenerable
+results/revision/cache/
+results/revision/preds/
+results/revision/logs/
+results/revision/pod_patch.zip
+results/*/ckpt/
+results/*_fixed_T*/ckpt/

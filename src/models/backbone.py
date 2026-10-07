@@ -145,8 +145,12 @@ class ClassificationHead(nn.Module):
             nn.Linear(d_model // 2, 1),
         )
 
+    fixed_index = None  # set (e.g. T-1) by the fixed-observation protocol to pool at a constant timestep
+
     def forward(self, reps, obs_mask=None):
-        if obs_mask is not None:
+        if self.fixed_index is not None:
+            pooled = reps[:, self.fixed_index]
+        elif obs_mask is not None:
             # Find index of last observed timestep for each sample in batch
             # obs_mask is (B, T, V), t_obs is (B, T)
             t_obs = obs_mask.any(dim=-1)

@@ -56,7 +56,7 @@ PRETRAIN_CKPT_DIR = os.environ.get(
 
 OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", "mortality")
 FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
-CACHE_DIR = os.path.join(OUT_DIR, "cache")
+CACHE_DIR = os.environ.get("PCL_LEGACY2_CACHE_DIR") or os.path.join(OUT_DIR, "cache")
 
 TASK = "mortality_hospital"
 
@@ -106,12 +106,21 @@ def main():
                      help="Override FINETUNE_EPOCHS (config default is 30 full-scale). "
                           "Use a small value only to sanity-check plumbing, not for real results.")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--fixed-T", type=int, default=None,
+                     help="Revision G1 remedy: fixed-observation protocol. Every stay sees exactly the first T hours "
+                          "(identical padding), stays with LOS < T are dropped, head pools at hour T-1. "
+                          "Writes to results/{task}_fixed_T{T}/ and leaves the original results untouched.")
     ap.add_argument("--cache-only", action="store_true",
                      help="Load + cache both sites' data, then exit before touching the GPU/model. "
                           "Run this on a cheap CPU pod; the cache lives on the network volume, so "
                           "switching back to the GPU pod and rerunning without this flag hits it "
                           "immediately instead of re-reading the full CSVs there.")
     args = ap.parse_args()
+
+    global OUT_DIR, FT_CKPT_DIR
+    if args.fixed_T:
+        OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"mortality_fixed_T{args.fixed_T}")
+        FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
 
     target = "eicu" if args.source == "mimic" else "mimic"
     tag = f"{args.method}_{args.source}to{target}_s{args.seed}"
@@ -175,6 +184,10 @@ def main():
 
     # ── Source site: fine-tune + in-domain val ─────────────────────────────
     src_samples = _load_site(args.source, args.fraction, args.seed)
+    if args.fixed_T:
+        from src.data.fixed_window import fix_window
+        src_samples = fix_window(src_samples, args.fixed_T, min_los_h=args.fixed_T)
+        logging.info(f"[FIXED-T={args.fixed_T}] source cohort after LOS>={args.fixed_T}h filter: {len(src_samples)}")
     src_ds = ICUDataset(src_samples)
     src_ds.coverage_report()
     n_pos = sum(1 for s in src_ds.samples if s[TASK].item() > 0)
@@ -189,6 +202,9 @@ def main():
 
     # ── Target site: zero-shot OOD, full site, no split ────────────────────
     tgt_samples = _load_site(target, args.fraction, args.seed)
+    if args.fixed_T:
+        tgt_samples = fix_window(tgt_samples, args.fixed_T, min_los_h=args.fixed_T)
+        logging.info(f"[FIXED-T={args.fixed_T}] target cohort after LOS>={args.fixed_T}h filter: {len(tgt_samples)}")
     tgt_ds = ICUDataset(tgt_samples)
     tgt_ds.coverage_report()
     tgt_loader = DataLoader(tgt_ds, batch_size=BATCH_SIZE, shuffle=False,
@@ -212,6 +228,8 @@ def main():
     model = fresh_model(seed=args.seed)
     model.load_state_dict(load_state_dict_flexible(pretrain_path, device="cpu"))
     model.add_classification_head(TASK)
+    if args.fixed_T:
+        model.cls_heads[TASK].fixed_index = args.fixed_T - 1
     logging.info(f"Loaded pretrained encoder: {pretrain_path}")
 
     ft_ckpt_path = os.path.join(FT_CKPT_DIR, f"{tag}.pt")
@@ -229,7 +247,7 @@ def main():
 
     elapsed = time.time() - t0
     result = {
-        "method": args.method, "source": args.source, "target": target,
+        "fixed_T": args.fixed_T, "method": args.method, "source": args.source, "target": target,
         "seed": args.seed, "task": TASK, "epochs": n_epochs, "fraction": args.fraction,
         "n_source": len(src_ds), "n_target": len(tgt_ds),
         "in_domain": in_domain, "ood": ood,

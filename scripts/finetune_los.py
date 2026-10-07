@@ -49,7 +49,7 @@ PRETRAIN_CKPT_DIR = os.environ.get(
 
 OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", "los")
 FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
-CACHE_DIR = os.path.join(OUT_DIR, "cache")  # NOT mortality's cache dir — see module docstring
+CACHE_DIR = os.environ.get("PCL_LEGACY2_CACHE_DIR") or os.path.join(OUT_DIR, "cache")  # NOT mortality's old cache — see module docstring
 
 TASK = "los_h"
 DATASETS = ("physionet", "mimic", "eicu")
@@ -98,10 +98,19 @@ def main():
     ap.add_argument("--epochs", type=int, default=None,
                      help="Override FINETUNE_EPOCHS. Small values are for plumbing checks only.")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--fixed-T", type=int, default=None,
+                     help="Revision G1 remedy: fixed-observation protocol. Every stay sees exactly the first T hours "
+                          "(identical padding), stays with LOS < T are dropped, head pools at hour T-1. "
+                          "Writes to results/{task}_fixed_T{T}/ and leaves the original results untouched.")
     ap.add_argument("--cache-only", action="store_true",
                      help="Load + cache PhysioNet/MIMIC/eICU, then exit before touching the GPU. "
                           "Same pattern as finetune_mortality.py's --cache-only.")
     args = ap.parse_args()
+
+    global OUT_DIR, FT_CKPT_DIR
+    if args.fixed_T:
+        OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"los_fixed_T{args.fixed_T}")
+        FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
 
     tag = f"{args.method}_s{args.seed}"
     out_path = os.path.join(OUT_DIR, f"{tag}.json")
@@ -163,6 +172,13 @@ def main():
                       f"Switch to the GPU pod and rerun without --cache-only.")
         return
 
+    if args.fixed_T:
+        from src.data.fixed_window import fix_window
+        pn_samples = fix_window(pn_samples, args.fixed_T, min_los_h=args.fixed_T)
+        mimic_samples = fix_window(mimic_samples, args.fixed_T, min_los_h=args.fixed_T)
+        eicu_samples = fix_window(eicu_samples, args.fixed_T, min_los_h=args.fixed_T)
+        logging.info(f"[FIXED-T={args.fixed_T}] cohorts after LOS>={args.fixed_T}h: pn={len(pn_samples)} "
+                     f"mimic={len(mimic_samples)} eicu={len(eicu_samples)}")
     site_a = [s for s in pn_samples if s["site_id"] == 0]
     site_b = [s for s in pn_samples if s["site_id"] == 1]
     if len(site_a) < 10:
@@ -200,6 +216,8 @@ def main():
     model = fresh_model(seed=args.seed)
     model.load_state_dict(load_state_dict_flexible(pretrain_path, device="cpu"))
     model.add_classification_head(TASK)
+    if args.fixed_T:
+        model.cls_heads[TASK].fixed_index = args.fixed_T - 1
     logging.info(f"Loaded pretrained encoder: {pretrain_path}")
 
     ft_ckpt_path = os.path.join(FT_CKPT_DIR, f"{tag}.pt")
@@ -218,7 +236,7 @@ def main():
 
     elapsed = time.time() - t0
     result = {
-        "method": args.method, "seed": args.seed, "task": TASK, "epochs": n_epochs, "fraction": args.fraction,
+        "fixed_T": args.fixed_T, "method": args.method, "seed": args.seed, "task": TASK, "epochs": n_epochs, "fraction": args.fraction,
         "n_source": len(ds_a), "n_targets": {k: len(v) for k, v in target_samples.items() if v},
         "in_domain": in_domain, "ood": ood, "elapsed_sec": elapsed,
     }
