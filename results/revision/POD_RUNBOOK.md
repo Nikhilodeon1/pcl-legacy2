@@ -24,7 +24,7 @@ If the V100 smoke test fails with "no kernel image", rerun with `TORCH_INDEX=htt
 export PHYSIONET_USER=<your username>; read -rs PHYSIONET_PASSWORD; export PHYSIONET_PASSWORD     # typed by you; never stored
 bash pod/fetch_data.sh                 # only the 13 files the loaders read; into /tmp/pcl_data (resumable)
 bash pod/build_caches.sh               # ~45-60 min, CPU only, 3 builds in parallel -> /tmp/pcl_cache
-mkdir -p ~/pcl_cache && cp -L /tmp/pcl_cache/{physionet,mimic,eicu}_frac1.0.pkl ~/pcl_cache/     # optional: survive a new pod (check `df -h ~` first)
+bash pod/persist_caches.sh            # gzip copies into ~/pcl_cache_gz (~8x smaller, ~300 MB); on a new pod: bash pod/restore_caches.sh
 ```
    `build_caches.sh` is CPU work on a GPU-priced pod. Do it first on a CPU-only pod if you can, persist to `~/pcl_cache`, then switch.
 3. *Optional, for the original-protocol audits:* the original fine-tuned checkpoints in `results/los/ckpt/` (9) and `results/mortality/ckpt/` (18).
