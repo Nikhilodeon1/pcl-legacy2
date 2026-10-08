@@ -111,6 +111,8 @@ def main():
     if args.fixed_T:
         OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"los_fixed_T{args.fixed_T}")
         FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
+    if os.environ.get("PCL_LEGACY2_CKPT_ROOT"):   # keep big checkpoints out of a small persistent home
+        FT_CKPT_DIR = os.path.join(os.environ["PCL_LEGACY2_CKPT_ROOT"], os.path.basename(OUT_DIR), "ckpt")
 
     tag = f"{args.method}_s{args.seed}"
     out_path = os.path.join(OUT_DIR, f"{tag}.json")

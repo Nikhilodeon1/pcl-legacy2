@@ -121,6 +121,8 @@ def main():
     if args.fixed_T:
         OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"mortality_fixed_T{args.fixed_T}")
         FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
+    if os.environ.get("PCL_LEGACY2_CKPT_ROOT"):   # keep big checkpoints out of a small persistent home
+        FT_CKPT_DIR = os.path.join(os.environ["PCL_LEGACY2_CKPT_ROOT"], os.path.basename(OUT_DIR), "ckpt")
 
     target = "eicu" if args.source == "mimic" else "mimic"
     tag = f"{args.method}_{args.source}to{target}_s{args.seed}"

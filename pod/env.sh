@@ -32,6 +32,9 @@ if [ -z "${PCL_LEGACY2_CACHE_DIR:-}" ]; then
 fi
 export PCL_CACHE_DIR="$PCL_LEGACY2_CACHE_DIR"
 
+# big/regenerable outputs stay out of the (small) persistent home: fixed-T fine-tune checkpoints and per-stay prediction dumps
+export PCL_LEGACY2_CKPT_ROOT="${PCL_LEGACY2_CKPT_ROOT:-/tmp/pcl_ckpt}"
+export PCL_PREDS_DIR="${PCL_PREDS_DIR:-/tmp/pcl_preds}"
 export NUM_WORKERS="${NUM_WORKERS:-8}"
 export PCL_TEST_MODE=0
 export POD_RATE_USD_PER_H="${POD_RATE_USD_PER_H:-}"    # set to your hourly rate to get cost lines in the run scripts

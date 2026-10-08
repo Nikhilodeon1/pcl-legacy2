@@ -58,11 +58,11 @@ for mod in ("numpy", "pandas", "sklearn", "scipy"):
         need(False, "", f"{mod} missing: {e}")
 
 home, tmp = os.path.expanduser("~"), "/tmp"
-for p, min_gb, why in ((home, 1.5, "persistent: repo + results + fixed-T checkpoints (~0.4 GB) + preds"),
+for p, min_gb, why in ((home, 0.3, "persistent: repo + small results only (checkpoints/preds go to /tmp)"),
                        (tmp, 40, "ephemeral: venv, raw data, caches")):
     if os.path.exists(p):
         free = shutil.disk_usage(p).free / 2**30
-        need(free >= min_gb, f"{p} free {free:.1f} GB ({why})", f"{p} free {free:.1f} GB < {min_gb} GB ({why})", required=(p == home))
+        need(free >= min_gb, f"{p} free {free:.1f} GB ({why})", f"{p} free {free:.1f} GB < {min_gb} GB ({why})", required=False)
 try:
     mem = [l for l in open("/proc/meminfo") if l.startswith("MemAvailable")][0].split()[1]
     need(int(mem) / 2**20 >= 24, f"RAM available {int(mem) / 2**20:.0f} GB", "RAM available < 24 GB: full eICU/MIMIC caches may not fit")
