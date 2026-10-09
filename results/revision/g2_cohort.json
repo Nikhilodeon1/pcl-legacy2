@@ -28,46 +28,46 @@
   },
   {
    "dataset": "mimic",
-   "stays": 18650,
-   "patients": 16755,
-   "stays_per_patient_max": 10,
-   "frac_patients_multi_stay": 0.08815279021187705,
-   "los_mean_h": 104.56870926422401,
-   "los_median_h": 59.51916666666668,
-   "los_p99_h": 675.7938944444398,
-   "los_max_h": 3068.838611111111,
-   "los_min_h": 24.005555555555553,
-   "frac_los_lt_48h": 0.3839142091152815,
-   "mortality_hospital_prev": 0.1188739946380697,
-   "n_deaths": 2217
+   "stays": 74607,
+   "patients": 54427,
+   "stays_per_patient_max": 37,
+   "frac_patients_multi_stay": 0.21910081393426056,
+   "los_mean_h": 105.35474486308256,
+   "los_median_h": 60.01416666666667,
+   "los_p99_h": 693.343688888889,
+   "los_max_h": 5433.6738888888885,
+   "los_min_h": 24.0,
+   "frac_los_lt_48h": 0.38131810688005147,
+   "mortality_hospital_prev": 0.11888964842441058,
+   "n_deaths": 8870
   },
   {
    "dataset": "eicu",
-   "stays": 32620,
-   "patients": 30265,
-   "stays_per_patient_max": 7,
-   "frac_patients_multi_stay": 0.0675698000991244,
-   "los_mean_h": 90.28146127120375,
-   "los_median_h": 55.4,
-   "los_p99_h": 539.4508333333334,
-   "los_max_h": 2539.9166666666665,
+   "stays": 130446,
+   "patients": 103031,
+   "stays_per_patient_max": 17,
+   "frac_patients_multi_stay": 0.1840222845551339,
+   "los_mean_h": 90.37345734377955,
+   "los_median_h": 55.65,
+   "los_p99_h": 530.8508333333339,
+   "los_max_h": 12152.933333333332,
    "los_min_h": 24.0,
-   "frac_los_lt_48h": 0.41676885346413245,
-   "mortality_hospital_prev": 0.09239730226854691,
-   "n_deaths": 3014
+   "frac_los_lt_48h": 0.41391073700995046,
+   "mortality_hospital_prev": 0.09097250969749934,
+   "n_deaths": 11867
   }
  ],
  "split_overlap": {
   "mimic": {
-   "val_stays": 3730,
-   "val_stays_whose_patient_in_train": 563,
-   "frac": 0.1509383378016086,
+   "val_stays": 14922,
+   "val_stays_whose_patient_in_train": 5666,
+   "frac": 0.3797078139659563,
    "note": "split is by STAY (sample index), not patient; fraction is at the cache subsample (frac<1 understates overlap because sibling stays are subsampled away)"
   },
   "eicu": {
-   "val_stays": 6524,
-   "val_stays_whose_patient_in_train": 758,
-   "frac": 0.11618638871857756,
+   "val_stays": 26090,
+   "val_stays_whose_patient_in_train": 8137,
+   "frac": 0.31188194710617095,
    "note": "split is by STAY (sample index), not patient; fraction is at the cache subsample (frac<1 understates overlap because sibling stays are subsampled away)"
   }
  },
@@ -94,8 +94,8 @@
  },
  "caches": {
   "pn_frac": 1.0,
-  "mimic_frac": 0.25,
-  "eicu_frac": 0.25,
+  "mimic_frac": 1.0,
+  "eicu_frac": 1.0,
   "seed": 42,
   "eicu_dir": null
  }

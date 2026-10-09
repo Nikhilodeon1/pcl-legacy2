@@ -2,8 +2,8 @@
  "counts": {
   "pn_a": 10381,
   "pn_b": 14779,
-  "mimic": 18650,
-  "eicu": 32620
+  "mimic": 74607,
+  "eicu": 130446
  },
  "mask_los_link": {
   "pn_a": {
@@ -23,26 +23,26 @@
    "within_6h_match": 0.99939102780973
   },
   "mimic": {
-   "n": 18650,
-   "frac_los_lt_48h": 0.3839142091152815,
-   "frac_window_full": 0.8132975871313672,
-   "spearman_lastobs_vs_min_los48": 0.6467831370278636,
-   "exact_match_lastobs_plus1_eq_min_los48": 0.616461126005362,
-   "within_6h_match": 0.7884718498659518,
-   "mortality_prev": 0.1188739946380697,
-   "mortality_prev_short_lt48h": 0.07388268156424581,
-   "mortality_prev_long_ge48h": 0.14691035683202786
+   "n": 74607,
+   "frac_los_lt_48h": 0.38131810688005147,
+   "frac_window_full": 0.8109158658034769,
+   "spearman_lastobs_vs_min_los48": 0.6588694695647918,
+   "exact_match_lastobs_plus1_eq_min_los48": 0.6190169823206938,
+   "within_6h_match": 0.7988526545766483,
+   "mortality_prev": 0.11888964842441058,
+   "mortality_prev_short_lt48h": 0.07314844106998489,
+   "mortality_prev_long_ge48h": 0.14708176264136227
   },
   "eicu": {
-   "n": 32620,
-   "frac_los_lt_48h": 0.41676885346413245,
-   "frac_window_full": 0.8245861434702636,
-   "spearman_lastobs_vs_min_los48": 0.6229875253704997,
-   "exact_match_lastobs_plus1_eq_min_los48": 0.5830165542611895,
-   "within_6h_match": 0.735561005518087,
-   "mortality_prev": 0.09239730226854691,
-   "mortality_prev_short_lt48h": 0.05685913938948143,
-   "mortality_prev_long_ge48h": 0.11779237844940867
+   "n": 130446,
+   "frac_los_lt_48h": 0.41391073700995046,
+   "frac_window_full": 0.8248700611747389,
+   "spearman_lastobs_vs_min_los48": 0.6259503247966014,
+   "exact_match_lastobs_plus1_eq_min_los48": 0.5857289606427181,
+   "within_6h_match": 0.7373855848397037,
+   "mortality_prev": 0.09097250969749934,
+   "mortality_prev_short_lt48h": 0.057525975589428256,
+   "mortality_prev_long_ge48h": 0.11459327953121526
   }
  },
  "flag_los": true,
@@ -94,9 +94,9 @@
    "train": "mimic_train",
    "eval": "mimic_val",
    "metric": "AUROC",
-   "value": 0.7870007094093223,
+   "value": 0.8037760811011504,
    "mae_hours": null,
-   "n": 3730
+   "n": 14922
   },
   {
    "task": "mortality",
@@ -104,9 +104,9 @@
    "train": "mimic_train",
    "eval": "eicu_zeroshot",
    "metric": "AUROC",
-   "value": 0.6610513162448778,
+   "value": 0.6541091476614271,
    "mae_hours": null,
-   "n": 32620
+   "n": 130446
   },
   {
    "task": "mortality",
@@ -114,9 +114,9 @@
    "train": "mimic_train",
    "eval": "mimic_val",
    "metric": "AUROC",
-   "value": 0.6270316542148047,
+   "value": 0.6303600600774668,
    "mae_hours": null,
-   "n": 3730
+   "n": 14922
   },
   {
    "task": "mortality",
@@ -124,9 +124,9 @@
    "train": "eicu_train",
    "eval": "eicu_val",
    "metric": "AUROC",
-   "value": 0.7622577872333989,
+   "value": 0.763783265308813,
    "mae_hours": null,
-   "n": 6524
+   "n": 26090
   },
   {
    "task": "mortality",
@@ -134,9 +134,9 @@
    "train": "eicu_train",
    "eval": "mimic_zeroshot",
    "metric": "AUROC",
-   "value": 0.7126636965822399,
+   "value": 0.7035286909664402,
    "mae_hours": null,
-   "n": 18650
+   "n": 74607
   },
   {
    "task": "mortality",
@@ -144,9 +144,9 @@
    "train": "eicu_train",
    "eval": "mimic_zeroshot",
    "metric": "AUROC",
-   "value": 0.605580125099497,
+   "value": 0.6139599379639947,
    "mae_hours": null,
-   "n": 18650
+   "n": 74607
   }
  ],
  "thresholds": {
@@ -180,9 +180,9 @@
    "train": "pn_a_train",
    "eval": "mimic",
    "metric": "R2",
-   "value": -0.11483296157918566,
-   "mae_hours": 62.07620284646004,
-   "n": 18650
+   "value": -0.11805359753181399,
+   "mae_hours": 62.77568440186075,
+   "n": 74607
   },
   {
    "task": "los",
@@ -190,9 +190,9 @@
    "train": "pn_a_train",
    "eval": "eicu",
    "metric": "R2",
-   "value": -0.12099650498185421,
-   "mae_hours": 49.63239186901378,
-   "n": 32620
+   "value": -0.10329332367323074,
+   "mae_hours": 49.661669874008375,
+   "n": 130446
   },
   {
    "task": "los",
@@ -220,9 +220,9 @@
    "train": "pn_a_train",
    "eval": "mimic",
    "metric": "R2",
-   "value": -0.13917541555864332,
-   "mae_hours": 63.227839743742976,
-   "n": 18650
+   "value": -0.13955013013661888,
+   "mae_hours": 63.72406856263663,
+   "n": 74607
   },
   {
    "task": "los",
@@ -230,9 +230,9 @@
    "train": "pn_a_train",
    "eval": "eicu",
    "metric": "R2",
-   "value": -0.11934059531922214,
-   "mae_hours": 49.326091572584104,
-   "n": 32620
+   "value": -0.1015642482510033,
+   "mae_hours": 49.36251692199705,
+   "n": 130446
   },
   {
    "task": "mortality",
@@ -240,9 +240,9 @@
    "train": "mimic_train",
    "eval": "mimic_val",
    "metric": "AUROC",
-   "value": 0.7870007094093223,
+   "value": 0.8037760811011504,
    "mae_hours": null,
-   "n": 3730
+   "n": 14922
   },
   {
    "task": "mortality",
@@ -250,9 +250,9 @@
    "train": "mimic_train",
    "eval": "eicu_zeroshot",
    "metric": "AUROC",
-   "value": 0.6610513162448778,
+   "value": 0.6541091476614271,
    "mae_hours": null,
-   "n": 32620
+   "n": 130446
   },
   {
    "task": "mortality",
@@ -260,9 +260,9 @@
    "train": "mimic_train",
    "eval": "mimic_val",
    "metric": "AUROC",
-   "value": 0.6270316542148047,
+   "value": 0.6303600600774668,
    "mae_hours": null,
-   "n": 3730
+   "n": 14922
   },
   {
    "task": "mortality",
@@ -270,9 +270,9 @@
    "train": "mimic_train",
    "eval": "eicu_zeroshot",
    "metric": "AUROC",
-   "value": 0.5425191682437083,
+   "value": 0.5424473938226192,
    "mae_hours": null,
-   "n": 32620
+   "n": 130446
   },
   {
    "task": "mortality",
@@ -280,9 +280,9 @@
    "train": "eicu_train",
    "eval": "eicu_val",
    "metric": "AUROC",
-   "value": 0.7622577872333989,
+   "value": 0.763783265308813,
    "mae_hours": null,
-   "n": 6524
+   "n": 26090
   },
   {
    "task": "mortality",
@@ -290,9 +290,9 @@
    "train": "eicu_train",
    "eval": "mimic_zeroshot",
    "metric": "AUROC",
-   "value": 0.7126636965822399,
+   "value": 0.7035286909664402,
    "mae_hours": null,
-   "n": 18650
+   "n": 74607
   },
   {
    "task": "mortality",
@@ -300,9 +300,9 @@
    "train": "eicu_train",
    "eval": "eicu_val",
    "metric": "AUROC",
-   "value": 0.5357554680014329,
+   "value": 0.5439739980004776,
    "mae_hours": null,
-   "n": 6524
+   "n": 26090
   },
   {
    "task": "mortality",
@@ -310,9 +310,9 @@
    "train": "eicu_train",
    "eval": "mimic_zeroshot",
    "metric": "AUROC",
-   "value": 0.605580125099497,
+   "value": 0.6139599379639947,
    "mae_hours": null,
-   "n": 18650
+   "n": 74607
   }
  ],
  "fixed_T_los": null,

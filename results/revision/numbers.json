@@ -34,9 +34,9 @@
     "train": "pn_a_train",
     "eval": "mimic",
     "metric": "R2",
-    "value": -0.11483296157918566,
-    "mae_hours": 62.07620284646004,
-    "n": 18650
+    "value": -0.11805359753181399,
+    "mae_hours": 62.77568440186075,
+    "n": 74607
    },
    {
     "task": "los",
@@ -44,9 +44,9 @@
     "train": "pn_a_train",
     "eval": "eicu",
     "metric": "R2",
-    "value": -0.12099650498185421,
-    "mae_hours": 49.63239186901378,
-    "n": 32620
+    "value": -0.10329332367323074,
+    "mae_hours": 49.661669874008375,
+    "n": 130446
    },
    {
     "task": "los",
@@ -74,9 +74,9 @@
     "train": "pn_a_train",
     "eval": "mimic",
     "metric": "R2",
-    "value": -0.13917541555864332,
-    "mae_hours": 63.227839743742976,
-    "n": 18650
+    "value": -0.13955013013661888,
+    "mae_hours": 63.72406856263663,
+    "n": 74607
    },
    {
     "task": "los",
@@ -84,9 +84,9 @@
     "train": "pn_a_train",
     "eval": "eicu",
     "metric": "R2",
-    "value": -0.11934059531922214,
-    "mae_hours": 49.326091572584104,
-    "n": 32620
+    "value": -0.1015642482510033,
+    "mae_hours": 49.36251692199705,
+    "n": 130446
    },
    {
     "task": "mortality",
@@ -94,9 +94,9 @@
     "train": "mimic_train",
     "eval": "mimic_val",
     "metric": "AUROC",
-    "value": 0.7870007094093223,
+    "value": 0.8037760811011504,
     "mae_hours": null,
-    "n": 3730
+    "n": 14922
    },
    {
     "task": "mortality",
@@ -104,9 +104,9 @@
     "train": "mimic_train",
     "eval": "eicu_zeroshot",
     "metric": "AUROC",
-    "value": 0.6610513162448778,
+    "value": 0.6541091476614271,
     "mae_hours": null,
-    "n": 32620
+    "n": 130446
    },
    {
     "task": "mortality",
@@ -114,9 +114,9 @@
     "train": "mimic_train",
     "eval": "mimic_val",
     "metric": "AUROC",
-    "value": 0.6270316542148047,
+    "value": 0.6303600600774668,
     "mae_hours": null,
-    "n": 3730
+    "n": 14922
    },
    {
     "task": "mortality",
@@ -124,9 +124,9 @@
     "train": "mimic_train",
     "eval": "eicu_zeroshot",
     "metric": "AUROC",
-    "value": 0.5425191682437083,
+    "value": 0.5424473938226192,
     "mae_hours": null,
-    "n": 32620
+    "n": 130446
    },
    {
     "task": "mortality",
@@ -134,9 +134,9 @@
     "train": "eicu_train",
     "eval": "eicu_val",
     "metric": "AUROC",
-    "value": 0.7622577872333989,
+    "value": 0.763783265308813,
     "mae_hours": null,
-    "n": 6524
+    "n": 26090
    },
    {
     "task": "mortality",
@@ -144,9 +144,9 @@
     "train": "eicu_train",
     "eval": "mimic_zeroshot",
     "metric": "AUROC",
-    "value": 0.7126636965822399,
+    "value": 0.7035286909664402,
     "mae_hours": null,
-    "n": 18650
+    "n": 74607
    },
    {
     "task": "mortality",
@@ -154,9 +154,9 @@
     "train": "eicu_train",
     "eval": "eicu_val",
     "metric": "AUROC",
-    "value": 0.5357554680014329,
+    "value": 0.5439739980004776,
     "mae_hours": null,
-    "n": 6524
+    "n": 26090
    },
    {
     "task": "mortality",
@@ -164,9 +164,9 @@
     "train": "eicu_train",
     "eval": "mimic_zeroshot",
     "metric": "AUROC",
-    "value": 0.605580125099497,
+    "value": 0.6139599379639947,
     "mae_hours": null,
-    "n": 18650
+    "n": 74607
    }
   ],
   "mask_los_link": {
@@ -187,26 +187,26 @@
     "within_6h_match": 0.99939102780973
    },
    "mimic": {
-    "n": 18650,
-    "frac_los_lt_48h": 0.3839142091152815,
-    "frac_window_full": 0.8132975871313672,
-    "spearman_lastobs_vs_min_los48": 0.6467831370278636,
-    "exact_match_lastobs_plus1_eq_min_los48": 0.616461126005362,
-    "within_6h_match": 0.7884718498659518,
-    "mortality_prev": 0.1188739946380697,
-    "mortality_prev_short_lt48h": 0.07388268156424581,
-    "mortality_prev_long_ge48h": 0.14691035683202786
+    "n": 74607,
+    "frac_los_lt_48h": 0.38131810688005147,
+    "frac_window_full": 0.8109158658034769,
+    "spearman_lastobs_vs_min_los48": 0.6588694695647918,
+    "exact_match_lastobs_plus1_eq_min_los48": 0.6190169823206938,
+    "within_6h_match": 0.7988526545766483,
+    "mortality_prev": 0.11888964842441058,
+    "mortality_prev_short_lt48h": 0.07314844106998489,
+    "mortality_prev_long_ge48h": 0.14708176264136227
    },
    "eicu": {
-    "n": 32620,
-    "frac_los_lt_48h": 0.41676885346413245,
-    "frac_window_full": 0.8245861434702636,
-    "spearman_lastobs_vs_min_los48": 0.6229875253704997,
-    "exact_match_lastobs_plus1_eq_min_los48": 0.5830165542611895,
-    "within_6h_match": 0.735561005518087,
-    "mortality_prev": 0.09239730226854691,
-    "mortality_prev_short_lt48h": 0.05685913938948143,
-    "mortality_prev_long_ge48h": 0.11779237844940867
+    "n": 130446,
+    "frac_los_lt_48h": 0.41391073700995046,
+    "frac_window_full": 0.8248700611747389,
+    "spearman_lastobs_vs_min_los48": 0.6259503247966014,
+    "exact_match_lastobs_plus1_eq_min_los48": 0.5857289606427181,
+    "within_6h_match": 0.7373855848397037,
+    "mortality_prev": 0.09097250969749934,
+    "mortality_prev_short_lt48h": 0.057525975589428256,
+    "mortality_prev_long_ge48h": 0.11459327953121526
    }
   }
  },
@@ -1061,46 +1061,46 @@
    },
    {
     "dataset": "mimic",
-    "stays": 18650,
-    "patients": 16755,
-    "stays_per_patient_max": 10,
-    "frac_patients_multi_stay": 0.08815279021187705,
-    "los_mean_h": 104.56870926422401,
-    "los_median_h": 59.51916666666668,
-    "los_p99_h": 675.7938944444398,
-    "los_max_h": 3068.838611111111,
-    "los_min_h": 24.005555555555553,
-    "frac_los_lt_48h": 0.3839142091152815,
-    "mortality_hospital_prev": 0.1188739946380697,
-    "n_deaths": 2217
+    "stays": 74607,
+    "patients": 54427,
+    "stays_per_patient_max": 37,
+    "frac_patients_multi_stay": 0.21910081393426056,
+    "los_mean_h": 105.35474486308256,
+    "los_median_h": 60.01416666666667,
+    "los_p99_h": 693.343688888889,
+    "los_max_h": 5433.6738888888885,
+    "los_min_h": 24.0,
+    "frac_los_lt_48h": 0.38131810688005147,
+    "mortality_hospital_prev": 0.11888964842441058,
+    "n_deaths": 8870
    },
    {
     "dataset": "eicu",
-    "stays": 32620,
-    "patients": 30265,
-    "stays_per_patient_max": 7,
-    "frac_patients_multi_stay": 0.0675698000991244,
-    "los_mean_h": 90.28146127120375,
-    "los_median_h": 55.4,
-    "los_p99_h": 539.4508333333334,
-    "los_max_h": 2539.9166666666665,
+    "stays": 130446,
+    "patients": 103031,
+    "stays_per_patient_max": 17,
+    "frac_patients_multi_stay": 0.1840222845551339,
+    "los_mean_h": 90.37345734377955,
+    "los_median_h": 55.65,
+    "los_p99_h": 530.8508333333339,
+    "los_max_h": 12152.933333333332,
     "los_min_h": 24.0,
-    "frac_los_lt_48h": 0.41676885346413245,
-    "mortality_hospital_prev": 0.09239730226854691,
-    "n_deaths": 3014
+    "frac_los_lt_48h": 0.41391073700995046,
+    "mortality_hospital_prev": 0.09097250969749934,
+    "n_deaths": 11867
    }
   ],
   "split_overlap": {
    "mimic": {
-    "val_stays": 3730,
-    "val_stays_whose_patient_in_train": 563,
-    "frac": 0.1509383378016086,
+    "val_stays": 14922,
+    "val_stays_whose_patient_in_train": 5666,
+    "frac": 0.3797078139659563,
     "note": "split is by STAY (sample index), not patient; fraction is at the cache subsample (frac<1 understates overlap because sibling stays are subsampled away)"
    },
    "eicu": {
-    "val_stays": 6524,
-    "val_stays_whose_patient_in_train": 758,
-    "frac": 0.11618638871857756,
+    "val_stays": 26090,
+    "val_stays_whose_patient_in_train": 8137,
+    "frac": 0.31188194710617095,
     "note": "split is by STAY (sample index), not patient; fraction is at the cache subsample (frac<1 understates overlap because sibling stays are subsampled away)"
    }
   },
@@ -1127,8 +1127,8 @@
   },
   "caches": {
    "pn_frac": 1.0,
-   "mimic_frac": 0.25,
-   "eicu_frac": 0.25,
+   "mimic_frac": 1.0,
+   "eicu_frac": 1.0,
    "seed": 42,
    "eicu_dir": null
   }

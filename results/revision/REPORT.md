@@ -1,7 +1,7 @@
 # Revision report (interim, 2026-10-07). Phase 0 + the Phase A items that need no GPU.
 
 **Spend so far: $0** (local CPU only). All numbers regenerate from raw files via `results/revision/scripts/`; collected in `numbers.json`.
-Caveat on data: MIMIC-IV and eICU analyses run on **25% stay-level subsamples** built with the original loaders (the pipeline reproduces
+Caveat on data: the A1/A3/A4/A6 LOS analyses below ran on **25% stay-level subsamples** of MIMIC-IV/eICU (G1 and G2 were re-run on the FULL cohorts, see the update at the end); rerun A1/A3 on full data with pod/run_audits.sh. Original statement: built with the original loaders (the pipeline reproduces
 the saved JSON R2 values on PhysioNet exactly: ERM s42 0.268 / 0.230 vs 0.2677 / 0.2302). Full-cohort reruns are in `pod/run_audits.sh`.
 Git: `.git` was empty when PREREG was written; the hash stand-in is `PREREG.sha256` (the repo `pcl-legacy2/` has its own working git; commit PREREG there).
 
@@ -61,3 +61,22 @@ Null-band result above. Simulation: with a criterion that has correct within-dom
 - Fixed-observation protocol reruns (27 fine-tunes), mortality values-shuffle, mortality A3/A4, B1-B4: need the pod, the pretrained encoders (`~/pcl_pretrained/*.pt`, not in git) and raw data or full caches. Cost estimate ~2.5-4 h on a V100; **gate: tell the strategy agent if rate x 4 h > $5**.
 - A2 (covariate isolation) and H4: after the above.
 - Full-cohort versions of G1/G2/A1/A3 (pod: `pod/run_audits.sh`).
+
+## Update 2026-10-09: G1 and G2 re-run on the FULL cohorts (MIMIC 74,607 stays, eICU 130,446; counts match the saved result JSONs)
+**G1 (mask/length-only probe), full data. Both flags stay tripped.**
+| task | probe | PN-A val | PN-B / source->target | MIMIC | eICU |
+|---|---|---|---|---|---|
+| LOS R2, mask+length | | +0.244 | +0.216 | -0.118 | -0.103 |
+| LOS R2, transformer ERM (saved JSON means) | | +0.264 | +0.229 | -0.122 | -0.103 |
+| mortality AUROC, mask+length | MIMIC->MIMIC val 0.804; MIMIC->eICU 0.654 | | | | |
+| mortality AUROC, mask+length | eICU->eICU val 0.764; eICU->MIMIC 0.704 | | | | |
+| mortality AUROC, fine-tuned (JSON) | MIMIC val 0.856, MIMIC->eICU 0.744-0.764; eICU val 0.840, eICU->MIMIC 0.808-0.819 | | | | |
+On eICU the mask-only LOS model matches the transformer to the third decimal (-0.103 vs -0.103).
+
+**G2 (full cohorts)** (`g2_cohort.json`):
+| dataset | stays | patients | LOS mean / median / P99 / max (h) | mortality |
+|---|---|---|---|---|
+| MIMIC-IV | 74,607 | 54,427 | 105.4 / 60.0 / 693 / **5,434** | 11.9% (8,870 deaths) |
+| eICU-CRD | 130,446 | 103,031 | 90.4 / 55.6 / 531 / **12,153** | 9.1% (11,867 deaths) |
+- **Table 7 in the paper is badly wrong for the tails**: it gives MIMIC max 492.7 h and eICU max 1,108.3 h; the real maxima are 5,434 h and 12,153 h (11x and 11x the paper's values; 16x and 36x PhysioNet's 336 h cap). The label-support mismatch is far larger than stated, but a handful of multi-hundred-day "stays" are also a data-quality issue (outlier LOS were never clipped), and R2 on raw hours is dominated by them. Suggest a robust-LOS sensitivity analysis (cap at 336 h, or log-space R2).
+- **Patient leakage in the source split is large**: 38% of MIMIC and 31% of eICU in-domain validation stays belong to a patient who also has a stay in the training split (by-stay split), so in-domain AUROC and the early-stopping/checkpoint choice are optimistic. This affects only the source-side numbers (the zero-shot targets are separate databases).

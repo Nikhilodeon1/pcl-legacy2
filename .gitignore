@@ -10,3 +10,4 @@ results/revision/logs/
 results/revision/pod_patch.zip
 results/*/ckpt/
 results/*_fixed_T*/ckpt/
+results/revision/cache_gz/
