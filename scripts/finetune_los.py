@@ -98,6 +98,12 @@ def main():
     ap.add_argument("--epochs", type=int, default=None,
                      help="Override FINETUNE_EPOCHS. Small values are for plumbing checks only.")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--pretrain-ckpt", default=None,
+                     help="Explicit pretrained-encoder file (default: $PCL_LEGACY2_PRETRAIN_DIR/{method}_pretrained.pt). "
+                          "Used for the lambda / pretraining-seed sweep (B2/B3).")
+    ap.add_argument("--encoder-id", default=None,
+                     help="Unique name for a non-default encoder, e.g. lam0.5_p43 (lambda 0.5, pretraining seed 43). "
+                          "Replaces --method in output file names and writes to a separate *_sweep results dir.")
     ap.add_argument("--fixed-T", type=int, default=None,
                      help="Revision G1 remedy: fixed-observation protocol. Every stay sees exactly the first T hours "
                           "(identical padding), stays with LOS < T are dropped, head pools at hour T-1. "
@@ -110,11 +116,13 @@ def main():
     global OUT_DIR, FT_CKPT_DIR
     if args.fixed_T:
         OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"los_fixed_T{args.fixed_T}")
-        FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
+    if args.encoder_id:
+        OUT_DIR = OUT_DIR + "_sweep"      # sweep runs never mix with the main 3-method results
+    FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
     if os.environ.get("PCL_LEGACY2_CKPT_ROOT"):   # keep big checkpoints out of a small persistent home
         FT_CKPT_DIR = os.path.join(os.environ["PCL_LEGACY2_CKPT_ROOT"], os.path.basename(OUT_DIR), "ckpt")
 
-    tag = f"{args.method}_s{args.seed}"
+    tag = f"{args.encoder_id or args.method}_s{args.seed}"
     out_path = os.path.join(OUT_DIR, f"{tag}.json")
     if os.path.exists(out_path) and not args.overwrite:
         logging.info(f"[RESUME] {out_path} already exists — skipping. Pass --overwrite to force.")
@@ -209,7 +217,7 @@ def main():
         target_loaders[name] = DataLoader(ICUDataset(samples), batch_size=BATCH_SIZE, shuffle=False,
                                            num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
 
-    pretrain_path = os.path.join(PRETRAIN_CKPT_DIR, f"{args.method}_pretrained.pt")
+    pretrain_path = args.pretrain_ckpt or os.path.join(PRETRAIN_CKPT_DIR, f"{args.method}_pretrained.pt")
     if not os.path.exists(pretrain_path):
         raise FileNotFoundError(
             f"{pretrain_path} not found — expected the URTC-era pretrained checkpoint here. "
@@ -238,7 +246,7 @@ def main():
 
     elapsed = time.time() - t0
     result = {
-        "fixed_T": args.fixed_T, "method": args.method, "seed": args.seed, "task": TASK, "epochs": n_epochs, "fraction": args.fraction,
+        "fixed_T": args.fixed_T, "encoder_id": args.encoder_id, "pretrain_ckpt": args.pretrain_ckpt, "method": args.method, "seed": args.seed, "task": TASK, "epochs": n_epochs, "fraction": args.fraction,
         "n_source": len(ds_a), "n_targets": {k: len(v) for k, v in target_samples.items() if v},
         "in_domain": in_domain, "ood": ood, "elapsed_sec": elapsed,
     }

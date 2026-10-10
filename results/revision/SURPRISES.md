@@ -26,8 +26,8 @@ Status as of 2026-10-06. Items marked (pending) await the MIMIC-IV / eICU cache 
 4. **PCL penalty has three active constraints, not five.** Defaults `pp_weight=0`, `si_weight=0` (`pcl_loss.py` L38, L184-187): only
    MAP, Henderson-Hasselbalch and Severinghaus SpO2-PaO2. The paper's Methods says five. SI was dropped because "ablation showed it
    hurt OOD performance" (an OOD-informed design choice).
-5. **lambda = 0.5 was chosen with PhysioNet-B as a selection domain** (`config.py` L44-46, `run_final_3seed.sh` header). PhysioNet-B
-   is therefore not a clean zero-shot target for PCL (selection can only have favored PCL there).
+5. **The PCL encoder used in this paper is lambda = 1.0, not 0.5 (corrects my earlier G0 note).** `results_lambda17/ckpt/pcl_pretrained.pt` carries effective lambda 1.0 (checkpoint history, epoch 16) and `lambda.log` L18 says `lambda=1.0`; it is a separate run from the sweep's `lambda_1.0` / `lambda_0.5` checkpoints (weights differ). The same run's sepsis lambda sweep (results_lambda17/paper_results.json) shows lambda=1.0 is a BAD setting: OOD AUROC PN-B/MIMIC/eICU = 0.675/0.645/0.585 vs lambda=0.5 = 0.750/0.695/0.662 vs lambda=0 (ERM) = 0.692/0.601/0.548. The sweep script's own header calls lambda=1.0 'an unjustified config default'. So the 'PCL is worst' result of this paper is for one arbitrary, known-poor lambda at one pretraining seed. `config.py` default (0.5) is NOT what was run.
+   Good news: **independent pretraining seeds exist.** `IMPORTED/pclCodebase/results_lambda17{,_s43,_s44}/ckpt/lambda_{0.0,0.1,0.5,1.0,2.0,5.0}_pretrained.pt` (lambda_0.0 is bit-identical to `erm_pretrained.pt` at seed 42, so lambda_0.0 = ERM) give ERM and 5 PCL weights at 3 independent pretraining seeds. B2 and B3 are essentially free.
 6. **LOS ranking is ERM > DRO > PCL at all three targets, not DRO >= ERM > PCL.** ERM is significantly above DRO at eICU
    (t = +7.04, d = 4.1). The paper's "same ranking as the corrected sepsis result" holds only for PCL-last (8/9 LOS cells).
 7. **The pooling explanation is backwards.** Representation distance and MMD are LARGEST at near-domain PhysioNet-B (6.96 / 0.294)

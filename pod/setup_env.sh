@@ -11,6 +11,8 @@ PYVER="${PCL_PYTHON_VERSION:-3.11}"
 echo "--- disk/memory ---"; df -h "$HOME" /tmp | sed 's/^/  /'; free -g | sed 's/^/  /' || true
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || echo "WARNING: nvidia-smi not found"
 
+# a crash mid-install leaves a venv that looks fine but is incomplete: only trust it if the ready-marker was written
+if [ -d "$PCL_VENV" ] && [ ! -f "$PCL_VENV/.pcl_ready" ]; then echo "--- removing incomplete venv from an interrupted setup ---"; rm -rf "$PCL_VENV"; fi
 if [ ! -x "$PCL_VENV/bin/python" ]; then
   if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null; then
     echo "--- creating venv with system python3 ($(python3 --version)) ---"
@@ -29,5 +31,6 @@ python -m pip install --quiet --upgrade pip
 echo "--- torch (CUDA wheels from $TORCH_INDEX; torch>=2.3 is required: torch.amp.GradScaler('cuda')) ---"
 python -m pip install "torch>=2.3,<2.9" --index-url "$TORCH_INDEX"
 python -m pip install -r "$PCL_REPO/pod/requirements-pod.txt"
+touch "$PCL_VENV/.pcl_ready"
 echo "--- preflight ---"
 python "$PCL_REPO/pod/preflight.py" || true

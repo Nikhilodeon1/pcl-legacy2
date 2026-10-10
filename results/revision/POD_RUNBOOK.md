@@ -1,5 +1,15 @@
 # Pod runbook (JupyterHub pod: persistent `~`, ephemeral `/tmp` and `/`)
 
+## CURRENT ORDER OF OPERATIONS (GPU is free, so the old cost gate is moot; V100/A10-class is fine)
+1. Caches: `bash pod/restore_caches.sh` (needs the 3 `.pkl.gz` in `~/pcl_cache_gz/`).  -- done once per new pod
+2. Encoders: upload the folder `results/revision/encoders_slim/` (local, 274 MB, gitignored) so that on the pod you have
+   `~/pcl_pretrained/{erm,pcl,dro}_pretrained.pt` and `~/pcl_pretrained/sweep/lam{L}_p{S}.pt` (21 files, 13 MB each).
+3. `git pull; source pod/env.sh; python pod/preflight.py`  -> must say PREFLIGHT PASSED (CUDA, encoders, caches).
+4. Main fixed-observation reruns, 27 fine-tunes: `bash pod/run_fixed_T.sh`  (LOS first: `ONLY=los bash pod/run_fixed_T.sh`).
+5. Inference audits on the ORIGINAL checkpoints: `bash pod/run_audits.sh`.
+6. Lambda x pretraining-seed sweep, 54 fine-tunes (B2/B3): `ONLY=los bash pod/run_sweep.sh` first (about 1 h), then the rest.
+7. Commit the small JSON/CSV results (`results/los_fixed_T24*/`, `results/mortality_fixed_T48*/`, `results/revision/*.csv|json`); push from the IDE.
+
 Why this is needed: both G1 leakage flags are tripped (SURPRISES.md), so PREREG requires the fixed-observation rerun, and the local
 machine has no GPU, no pretrained encoders and no mortality checkpoints. Pod: **V100, 16 cores, 64 GB**.
 
