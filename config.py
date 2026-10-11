@@ -59,7 +59,7 @@ FINETUNE_EPOCHS_DEMO = FINETUNE_EPOCHS  # Legacy alias for old scripts/
 # ── GPU / Performance ────────────────────────────────────────────────────────
 NUM_WORKERS = 0 if TEST_MODE else int(os.environ.get("NUM_WORKERS", "8"))
 PIN_MEMORY = torch.cuda.is_available()
-USE_AMP = torch.cuda.is_available() and not TEST_MODE
+USE_AMP = torch.cuda.is_available() and not TEST_MODE and os.environ.get("PCL_DISABLE_AMP", "0") != "1"   # PCL_DISABLE_AMP=1: fp32 diagnostic runs
 
 # ── Noise experiment ─────────────────────────────────────────────────────────
 NOISE_LEVELS = [0, 5, 10, 15]

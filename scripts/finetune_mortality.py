@@ -208,6 +208,7 @@ def main():
         )
     train_loader, val_loader = make_patient_split_loaders(
         src_ds, train_frac=0.8, batch_size=BATCH_SIZE, seed=args.seed, stratify_key=TASK,
+        num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY,
     )
 
     # ── Target site: zero-shot OOD, full site, no split ────────────────────

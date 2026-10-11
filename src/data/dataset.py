@@ -82,7 +82,7 @@ class ICUDataset(Dataset):
 
 
 def make_patient_split_loaders(dataset, train_frac=0.8, batch_size=16, seed=42,
-                                stratify_key="mortality"):
+                                stratify_key="mortality", num_workers=0, pin_memory=False):
     labels = dataset.get_labels(stratify_key)
 
     if len(np.unique(labels)) < 2:
@@ -101,8 +101,12 @@ def make_patient_split_loaders(dataset, train_frac=0.8, batch_size=16, seed=42,
         train_ds = Subset(dataset, train_idx.tolist())
         val_ds = Subset(dataset, val_idx.tolist())
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+    # num_workers only parallelises batch construction; the sampler (shuffle order) is drawn in the main process, so
+    # the training protocol is unchanged. Default 0 keeps every existing caller identical.
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=True,
+                              num_workers=num_workers, pin_memory=pin_memory)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                            num_workers=num_workers, pin_memory=pin_memory)
 
     logging.info(f"Split: train={len(train_ds)}, val={len(val_ds)}")
     return train_loader, val_loader

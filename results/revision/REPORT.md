@@ -80,3 +80,17 @@ On eICU the mask-only LOS model matches the transformer to the third decimal (-0
 | eICU-CRD | 130,446 | 103,031 | 90.4 / 55.6 / 531 / **12,153** | 9.1% (11,867 deaths) |
 - **Table 7 in the paper is badly wrong for the tails**: it gives MIMIC max 492.7 h and eICU max 1,108.3 h; the real maxima are 5,434 h and 12,153 h (11x and 11x the paper's values; 16x and 36x PhysioNet's 336 h cap). The label-support mismatch is far larger than stated, but a handful of multi-hundred-day "stays" are also a data-quality issue (outlier LOS were never clipped), and R2 on raw hours is dominated by them. Suggest a robust-LOS sensitivity analysis (cap at 336 h, or log-space R2).
 - **Patient leakage in the source split is large**: 38% of MIMIC and 31% of eICU in-domain validation stays belong to a patient who also has a stay in the training split (by-stay split), so in-domain AUROC and the early-stopping/checkpoint choice are optimistic. This affects only the source-side numbers (the zero-shot targets are separate databases).
+
+## Update 2026-10-10: LOS under the fixed-observation protocol (T=24 h), 9 fine-tunes, full cohorts (`fixedT24_los_summary.csv/json`; script `scripts/fixedT_los_summary.py`)
+Cohorts unchanged (all stays have LOS >= 24 h): PN-A 10,381, PN-B 14,779, MIMIC 74,607, eICU 130,446. Same pretrained encoders, same 30-epoch schedule, head pools at hour 23 for every stay.
+| R2, mean (SD) over 3 fine-tune seeds | PN-A val | PN-B | MIMIC | eICU |
+|---|---|---|---|---|
+| ERM | +0.042 (0.012) | -0.018 (0.007) | -0.196 (0.009) | -0.178 (0.010) |
+| PCL (lambda=1.0) | +0.034 (0.012) | -0.011 (0.010) | -0.194 (0.005) | -0.176 (0.003) |
+| DRO | +0.047 (0.009) | -0.007 (0.009) | -0.186 (0.014) | -0.168 (0.015) |
+| original protocol, ERM / PCL / DRO | +0.264 / +0.255 / +0.269 | +0.229 / +0.208 / +0.225 | -0.122 / -0.134 / -0.128 | -0.103 / -0.114 / -0.110 |
+| constant (PN-A train mean) | ~0 | -0.002 | -0.179 | -0.170 |
+- Removing the length shortcut collapses in-domain R2 from about 0.26 to about 0.04 and PN-B from about 0.22 to about 0; MIMIC/eICU end at or slightly below the constant-prediction line.
+- No method difference survives: paired by seed (df=2, critical |t|=4.303), the largest |t| is 2.93 (ERM-DRO on PN-B); PCL-ERM is within 0.008 R2 with |t| <= 0.97 at every target and changes sign across targets.
+- PREREG consequence: G1 remedy executed. The original LOS headline (PCL significantly below ERM/DRO at eICU/MIMIC) is not reproduced; it was a property of how each fine-tuned head used the length shortcut.
+- Caveat: mortality fixed-T (T=48, drops stays < 48 h) and the lambda x pretraining-seed sweep are pending; do not generalize this to mortality.

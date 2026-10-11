@@ -1,0 +1,19 @@
+method,direction,seed,ood_auroc,val_auroc,note
+dro,eicutomimic,42,0.742,0.768,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+dro,eicutomimic,43,0.734,0.773,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+dro,eicutomimic,44,0.745,0.763,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+dro,mimictoeicu,42,0.712,0.794,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+dro,mimictoeicu,43,0.717,0.787,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+dro,mimictoeicu,44,0.721,0.799,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+erm,eicutomimic,42,0.75,0.771,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+erm,eicutomimic,43,0.737,0.772,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+erm,eicutomimic,44,0.748,0.764,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+erm,mimictoeicu,42,0.728,0.794,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+erm,mimictoeicu,43,0.72,0.786,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+erm,mimictoeicu,44,0.724,0.797,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+pcl,eicutomimic,42,0.585,0.654,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+pcl,eicutomimic,43,0.627,0.679,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+pcl,eicutomimic,44,0.5,0.5,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+pcl,mimictoeicu,42,0.5,0.5,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+pcl,mimictoeicu,43,0.708,0.779,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json
+pcl,mimictoeicu,44,0.675,0.745,transcribed from terminal paste 2026-10-11 (3 decimals); replace with results/mortality_fixed_T48/*.json

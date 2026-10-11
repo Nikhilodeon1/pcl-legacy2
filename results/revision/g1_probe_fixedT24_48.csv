@@ -1,0 +1,17 @@
+task,features,train,eval,metric,value,mae_hours,n
+los,mask+length,pn_a_train,pn_a_val,R2,0.014416755904526513,11.132826948924501,2077
+los,mask+length,pn_a_train,pn_b,R2,-0.08108977224942637,11.592721368541968,14779
+los,mask+length,pn_a_train,mimic,R2,-0.1910722862864498,68.84389282320141,74607
+los,mask+length,pn_a_train,eicu,R2,-0.16950760346000782,54.61313703612256,130446
+los,length-only,pn_a_train,pn_a_val,R2,-0.003684666681827098,10.814557760899133,2077
+los,length-only,pn_a_train,pn_b,R2,-0.0036050997553196407,10.72798565823718,14779
+los,length-only,pn_a_train,mimic,R2,-0.20427733558907923,69.3530155357982,74607
+los,length-only,pn_a_train,eicu,R2,-0.17376418756082135,54.62304415726479,130446
+mortality,mask+length,mimic_train,mimic_val,AUROC,0.7256038871429732,,9232
+mortality,mask+length,mimic_train,eicu_zeroshot,AUROC,0.6267280164749521,,76453
+mortality,length-only,mimic_train,mimic_val,AUROC,0.5229761041259932,,9232
+mortality,length-only,mimic_train,eicu_zeroshot,AUROC,0.5032414311738896,,76453
+mortality,mask+length,eicu_train,eicu_val,AUROC,0.692472275256902,,15291
+mortality,mask+length,eicu_train,mimic_zeroshot,AUROC,0.6335344126358066,,46158
+mortality,length-only,eicu_train,eicu_val,AUROC,0.5015175801953496,,15291
+mortality,length-only,eicu_train,mimic_zeroshot,AUROC,0.5147640095566929,,46158
