@@ -94,3 +94,14 @@ Cohorts unchanged (all stays have LOS >= 24 h): PN-A 10,381, PN-B 14,779, MIMIC 
 - No method difference survives: paired by seed (df=2, critical |t|=4.303), the largest |t| is 2.93 (ERM-DRO on PN-B); PCL-ERM is within 0.008 R2 with |t| <= 0.97 at every target and changes sign across targets.
 - PREREG consequence: G1 remedy executed. The original LOS headline (PCL significantly below ERM/DRO at eICU/MIMIC) is not reproduced; it was a property of how each fine-tuned head used the length shortcut.
 - Caveat: mortality fixed-T (T=48, drops stays < 48 h) and the lambda x pretraining-seed sweep are pending; do not generalize this to mortality.
+
+## Update 2026-10-11: mortality under the fixed-observation protocol (T=48 h), fp16 vs fp32 (`fixedT48_mortality_summary.csv/json`; script `scripts/fixedT48_mortality_summary.py`)
+Cohorts: MIMIC source 46,158 stays (stays >=48 h), eICU 76,453. 3 fine-tune seeds (42/43/44) x 3 methods x 2 directions, fp16 AMP (first batch; values from a 3-decimal transcription because the JSONs were lost in a pod refresh) and fp32 (all 18 re-run; full-precision JSONs in `results/mortality_fixed_T48_sweep/`). OOD AUROC, mean (SD), collapsed runs = in-domain AUROC <= 0.51:
+
+| method | MIMIC->eICU fp16 | eICU->MIMIC fp16 | MIMIC->eICU fp32 | eICU->MIMIC fp32 |
+|---|---|---|---|---|
+| ERM | 0.724 (0.004) | 0.745 (0.007) | 0.725 (0.002) | 0.750 (0.006) |
+| PCL | 0.628 (0.112), 1/3 collapsed | 0.571 (0.065), 1/3 | 0.626 (0.111), 1/3 | 0.614 (0.114), 1/3 |
+| DRO | 0.717 (0.005) | 0.740 (0.006) | 0.721 (0.002) | 0.742 (0.012) |
+
+fp32 PCL per run (OOD AUROC): eICU->MIMIC 0.728 / 0.616 / 0.500 (seeds 42/43/44); MIMIC->eICU 0.702 / 0.678 / 0.499. fp16 -> fp32 changes are small for ERM and DRO (|diff| <= 0.005, paired t <= 2.51); for PCL the change differs by run, not systematically (the fp16 and fp32 runs that collapse are different runs). Paired PCL-ERM (fp32): -0.099 (t=-1.57) and -0.135 (t=-1.98); all |t| < 4.303 (df = 2), so with n = 3 seeds no PCL-vs-baseline difference is significant, and the point estimates are driven by the collapsed runs. ERM-DRO differences (<= 0.008) are replicate noise (one pretraining pair). See SURPRISES item 12. Both precisions are reported; no run was dropped. Original-protocol (variable-length) numbers were 0.819/0.808/0.819 (eICU->MIMIC) and 0.760/0.744/0.764 (MIMIC->eICU) for ERM/PCL/DRO, i.e. the fixed protocol (fp32) lowers OOD AUROC by ~0.04-0.07 for ERM/DRO and ~0.12-0.19 for PCL (mean over seeds).

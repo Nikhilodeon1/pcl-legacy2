@@ -1,0 +1,41 @@
+{
+  "fixed_T": 48,
+  "encoder_id": "dro_fp32",
+  "pretrain_ckpt": "/home/jovyan/pcl_pretrained/dro_pretrained.pt",
+  "method": "dro",
+  "source": "mimic",
+  "target": "eicu",
+  "seed": 44,
+  "task": "mortality_hospital",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 46158,
+  "n_target": 76453,
+  "in_domain": {
+    "auroc": 0.798625339150531,
+    "auprc": 0.43763626651629145,
+    "brier": 0.18848049640655518,
+    "auroc_ci": [
+      0.7864755153820955,
+      0.8100665748507311
+    ],
+    "auprc_ci": [
+      0.4088715347489887,
+      0.46639785783970894
+    ]
+  },
+  "ood": {
+    "auroc": 0.7232510372167649,
+    "auprc": 0.2600585189136805,
+    "brier": 0.19548393785953522,
+    "auroc_ci": [
+      0.7171789408863346,
+      0.7291394364111107
+    ],
+    "auprc_ci": [
+      0.251905498732467,
+      0.26876526478664275
+    ]
+  },
+  "elapsed_sec": 822.506977558136
+}
