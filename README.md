@@ -1,4 +1,4 @@
-# PCL Legacy2
+# About the Repo
 
 Tests whether a prior finding — that label-free criteria computed on
 unlabeled target-site data (reconstruction error, physiology-constraint
@@ -13,10 +13,6 @@ mortality (static binary) and length-of-stay (LOS, continuous). Same
 pretrained encoders reused as-is across both (no retraining), across
 MIMIC-IV, eICU-CRD, and PhysioNet 2019.
 
-This repo was split out of a shared PCL monorepo. `config.py`, `src/`, and
-`pod_monitor.py` are vendored copies of the model/training/loss
-implementation from that split (see [VENDORED.md](VENDORED.md)) — this repo
-is self-contained; nothing here imports from outside it.
 
 ## Result summary
 
@@ -41,10 +37,6 @@ is self-contained; nothing here imports from outside it.
   (Simpson's paradox); every correlation reported here is computed
   within-domain for this reason.
 
-Full write-up: [`../ml4h_PAPERS/Legacy2PCL Paper/main.tex`](../ml4h_PAPERS/Legacy2PCL%20Paper/main.tex)
-(compiled `main.pdf` alongside it). Narrative results summary:
-[`results/SUMMARY.md`](results/SUMMARY.md). Raw per-run data every number in
-the paper traces back to: `results/mortality/*.json`, `results/los/*.json`.
 
 ## Reproducing this
 
