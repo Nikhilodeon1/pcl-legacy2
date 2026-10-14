@@ -1,2 +1,5 @@
 18b219168b8874513f59d633a44182df897eb9929ff5ae09bd852ff64e89ff1b *PREREG.md
 timestamp_utc 2026-10-06T16:08:51Z (file written within minutes after)
+
+# 2026-10-13: Deviations section filled in after the fact; sha256 of PREREG.md with deviations: 537e1afca191128515a6098e692746311c7a3b626c9f9a9003ebe90f85b46859
+# (the first hash above is of the file as originally written; the only change since is the text under '## Deviations')

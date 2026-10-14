@@ -96,4 +96,11 @@ Written 2026-10-06T16:08Z, before any Phase A analysis was run.
 
 ## Deviations
 
-(none yet)
+Logged 2026-10-13, after the fact (the plan text above is unchanged; the recorded hash in `PREREG.sha256` is of the file BEFORE this section was filled in).
+
+1. **Mortality fixed-T=48 precision.** The first batch of 18 fine-tunes used fp16 AMP (the repository default on GPU). PCL fine-tunes collapsed or degraded; a diagnostic (`scripts/diag_pcl_collapse.py`, fp16 overflow check) and one fp32 test run were added, then all 18 were rerun in fp32 (`pod/run_fp32_mort.sh`). Neither step was in the plan. fp16 result JSONs were lost in a pod refresh; the fp16 numbers in the report are a 3-decimal transcription (`fixedT48_mortality_table_from_pod_paste.csv`). Both precisions are reported; no run was dropped.
+2. **Sweep scope (B1/B2).** Planned: 6 lambda x 3 pretraining seeds. Run: lambda in {0.0, 0.5, 1.0} x pretraining seeds {42, 43, 44}, one fine-tune per encoder (fine-tune seed = pretraining seed), fp32, LOS T=24 and mortality T=48 (27 fine-tunes). lambda 0.1, 2.0, 5.0 were not run. The selection criteria were not recomputed on the sweep checkpoints.
+3. **"Failed fine-tune" threshold** (in-domain AUROC < 0.70) in `sweep_summary.py` is descriptive and was chosen after seeing the data (every ERM run is >= 0.76); the exact-collapse criterion (<= 0.51) is separate.
+4. **Subsample caveat.** A1/A3/A4/A6 LOS analyses ran on 25% stay-level subsamples of MIMIC-IV/eICU and on the original-protocol checkpoints (G1, G2 were re-run on full cohorts on 2026-10-09). Full-cohort reruns of A1/A3/A4 are not done. A4 and A3 were not run for mortality, and not under the fixed protocol.
+5. **Not run:** A2 (covariate isolation), H4 (needs >= 10 seeds), mortality values-shuffle test (original mortality checkpoints unavailable).
+6. **Cohort change under the fixed protocol:** mortality T=48 drops stays < 48 h, as pre-specified, so original-vs-fixed mortality comparisons confound protocol and cohort (see REPORT 2026-10-11 update).

@@ -15,7 +15,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REV = os.path.dirname(HERE)
-DS = os.environ.get("PCL_LOCAL_DATASETS", "C:/Users/nikhi/Codes/RES/datasets")
+DS = os.environ.get("PCL_LOCAL_DATASETS", "./datasets")
 env = dict(os.environ)
 env.setdefault("PHYSIONET_DIR", f"{DS}/physionet2019")
 env.setdefault("MIMIC_DIR", f"{DS}/mimic/workspace/physionet.org/files/mimiciv/3.1")

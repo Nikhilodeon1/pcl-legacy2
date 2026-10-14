@@ -1,0 +1,43 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "lam1.0_p44",
+  "pretrain_ckpt": "/home/jovyan/pcl_pretrained/sweep/lam1.0_p44.pt",
+  "method": "pcl",
+  "seed": 44,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779,
+    "mimic": 74607,
+    "eicu": 130446
+  },
+  "in_domain": {
+    "mae_hours": 11.125822457635794,
+    "rmse_hours": 23.50743323809733,
+    "r2": 0.02483444064375273,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.677442765481443,
+      "rmse_hours": 23.280518477658585,
+      "r2": -0.026442212633023043,
+      "n": 14779
+    },
+    "mimic": {
+      "mae_hours": 69.65947997943066,
+      "rmse_hours": 153.53797698087652,
+      "r2": -0.2092664749066313,
+      "n": 74607
+    },
+    "eicu": {
+      "mae_hours": 55.69310228058769,
+      "rmse_hours": 126.56198484847202,
+      "r2": -0.1905058404194413,
+      "n": 130446
+    }
+  },
+  "elapsed_sec": 407.20800375938416
+}

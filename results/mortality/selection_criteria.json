@@ -1,0 +1,315 @@
+{
+  "n_cells": 18,
+  "signals": [
+    "violation",
+    "entropy",
+    "recon_mse",
+    "repr_dist",
+    "mmd",
+    "atc"
+  ],
+  "spearman_all": {
+    "violation": -0.11042311661506708,
+    "entropy": -0.5975232198142415,
+    "recon_mse": -0.15583075335397317,
+    "repr_dist": 0.6470588235294118,
+    "mmd": 0.5149638802889577,
+    "atc": 0.5624355005159959
+  },
+  "step5_recon_mse_by_method_type": {
+    "pcl (constraint-trained)": 0.42857142857142855,
+    "erm+dro (no constraint)": 0.17482517482517482
+  },
+  "regret_by_direction": {
+    "eicu->mimic": {
+      "violation": {
+        "regret": 0.0,
+        "picked": "erm"
+      },
+      "entropy": {
+        "regret": 0.0,
+        "picked": "erm"
+      },
+      "recon_mse": {
+        "regret": -8.096159112447321e-05,
+        "picked": "dro"
+      },
+      "repr_dist": {
+        "regret": -8.096159112447321e-05,
+        "picked": "dro"
+      },
+      "mmd": {
+        "regret": 0.0,
+        "picked": "erm"
+      },
+      "atc": {
+        "regret": -8.096159112447321e-05,
+        "picked": "dro"
+      },
+      "best_method": "erm"
+    },
+    "mimic->eicu": {
+      "violation": {
+        "regret": -0.0040109202287581525,
+        "picked": "erm"
+      },
+      "entropy": {
+        "regret": -0.02002591060459946,
+        "picked": "pcl"
+      },
+      "recon_mse": {
+        "regret": -0.0040109202287581525,
+        "picked": "erm"
+      },
+      "repr_dist": {
+        "regret": 0.0,
+        "picked": "dro"
+      },
+      "mmd": {
+        "regret": 0.0,
+        "picked": "dro"
+      },
+      "atc": {
+        "regret": -0.0040109202287581525,
+        "picked": "erm"
+      },
+      "best_method": "dro"
+    }
+  },
+  "cells": [
+    {
+      "method": "dro",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 42,
+      "true_auroc": 0.8155824526002706,
+      "violation": 0.21994678830708436,
+      "entropy": 0.48183853031507007,
+      "recon_mse": 0.046340264077339224,
+      "repr_dist": 6.852645488393664,
+      "atc": 0.7242215877866688,
+      "mmd": 0.038821280002593994
+    },
+    {
+      "method": "dro",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 43,
+      "true_auroc": 0.8200150324002144,
+      "violation": 0.2378334270693105,
+      "entropy": 0.36977613292304834,
+      "recon_mse": 0.0699770237732148,
+      "repr_dist": 7.037770862550888,
+      "atc": 0.766147948583913,
+      "mmd": 0.03794872760772705
+    },
+    {
+      "method": "dro",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 44,
+      "true_auroc": 0.8217268407148509,
+      "violation": 0.19774552243530794,
+      "entropy": 0.40675368484079233,
+      "recon_mse": 0.055684582847147,
+      "repr_dist": 6.977146419765576,
+      "atc": 0.7494336992507405,
+      "mmd": 0.03706616163253784
+    },
+    {
+      "method": "dro",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 42,
+      "true_auroc": 0.7701569080443316,
+      "violation": 0.10989039213118541,
+      "entropy": 0.5439663933111678,
+      "recon_mse": 0.049516271236408525,
+      "repr_dist": 4.779250713831729,
+      "atc": 0.5329101697254036,
+      "mmd": 0.02381795644760132
+    },
+    {
+      "method": "dro",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 43,
+      "true_auroc": 0.7770506556313489,
+      "violation": 0.1922960595904923,
+      "entropy": 0.3540760783938032,
+      "recon_mse": 0.03379883106555247,
+      "repr_dist": 4.52052706019338,
+      "atc": 0.7543657912086227,
+      "mmd": 0.025320112705230713
+    },
+    {
+      "method": "dro",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 44,
+      "true_auroc": 0.7448274923579568,
+      "violation": 0.24896362466954786,
+      "entropy": 0.5341137129050189,
+      "recon_mse": 0.06880588831082349,
+      "repr_dist": 4.6691626065870215,
+      "atc": 0.6533508118301826,
+      "mmd": 0.02917879819869995
+    },
+    {
+      "method": "erm",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 42,
+      "true_auroc": 0.8201747975289939,
+      "violation": 0.16465890803356353,
+      "entropy": 0.3661380507670005,
+      "recon_mse": 0.04689789353207942,
+      "repr_dist": 7.321841185597019,
+      "atc": 0.6380232417869637,
+      "mmd": 0.035845398902893066
+    },
+    {
+      "method": "erm",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 43,
+      "true_auroc": 0.8164780176357502,
+      "violation": 0.13793026249171517,
+      "entropy": 0.3526106761588929,
+      "recon_mse": 0.08472764717378849,
+      "repr_dist": 6.871815754939241,
+      "atc": 0.7737477716568151,
+      "mmd": 0.038632750511169434
+    },
+    {
+      "method": "erm",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 44,
+      "true_auroc": 0.8209143953239652,
+      "violation": 0.18583618957465958,
+      "entropy": 0.38776862221051,
+      "recon_mse": 0.052843495205378094,
+      "repr_dist": 6.773930661230946,
+      "atc": 0.707735199110003,
+      "mmd": 0.03127765655517578
+    },
+    {
+      "method": "erm",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 42,
+      "true_auroc": 0.7496258119962028,
+      "violation": 0.11052729103488615,
+      "entropy": 0.5311573143944672,
+      "recon_mse": 0.01924946634191273,
+      "repr_dist": 4.908062726249787,
+      "atc": 0.5824479094797848,
+      "mmd": 0.027013957500457764
+    },
+    {
+      "method": "erm",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 43,
+      "true_auroc": 0.7647833221076548,
+      "violation": 0.12018592643106496,
+      "entropy": 0.3931732141545547,
+      "recon_mse": 0.05094305382325521,
+      "repr_dist": 5.513634067290671,
+      "atc": 0.6960121429557058,
+      "mmd": 0.033525824546813965
+    },
+    {
+      "method": "erm",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 44,
+      "true_auroc": 0.7655931612435054,
+      "violation": 0.23400917544347805,
+      "entropy": 0.505123714685473,
+      "recon_mse": 0.06440731427284535,
+      "repr_dist": 5.075218088362585,
+      "atc": 0.6693267712310075,
+      "mmd": 0.03679472208023071
+    },
+    {
+      "method": "pcl",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 42,
+      "true_auroc": 0.8021080569442796,
+      "violation": 0.7257389538590757,
+      "entropy": 0.4247475703247353,
+      "recon_mse": 0.27635571615561766,
+      "repr_dist": 7.219174703279111,
+      "atc": 0.684935729891297,
+      "mmd": 0.03854167461395264
+    },
+    {
+      "method": "pcl",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 43,
+      "true_auroc": 0.8106592917947657,
+      "violation": 0.260837656778845,
+      "entropy": 0.48900905340542056,
+      "recon_mse": 0.11877898301852889,
+      "repr_dist": 8.30990442791635,
+      "atc": 0.6909405283686517,
+      "mmd": 0.042714059352874756
+    },
+    {
+      "method": "pcl",
+      "source": "eicu",
+      "target": "mimic",
+      "seed": 44,
+      "true_auroc": 0.8120120183055299,
+      "violation": 0.24743201405602366,
+      "entropy": 0.3782848818227025,
+      "recon_mse": 0.10846547106848677,
+      "repr_dist": 7.636544166263754,
+      "atc": 0.7134987333628212,
+      "mmd": 0.0433843731880188
+    },
+    {
+      "method": "pcl",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 42,
+      "true_auroc": 0.7484214645627026,
+      "violation": 0.5498633036837959,
+      "entropy": 0.45515700270335174,
+      "recon_mse": 0.1931202233467326,
+      "repr_dist": 5.810456816291817,
+      "atc": 0.5697453352345032,
+      "mmd": 0.030412495136260986
+    },
+    {
+      "method": "pcl",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 43,
+      "true_auroc": 0.7479975082992278,
+      "violation": 0.25444367234711845,
+      "entropy": 0.4230561194156596,
+      "recon_mse": 0.08196099839021999,
+      "repr_dist": 5.02227280200885,
+      "atc": 0.7091900096591693,
+      "mmd": 0.027008056640625
+    },
+    {
+      "method": "pcl",
+      "source": "mimic",
+      "target": "eicu",
+      "seed": 44,
+      "true_auroc": 0.7355383513579091,
+      "violation": 0.17747425453218174,
+      "entropy": 0.5048483852234525,
+      "recon_mse": 0.08614979890291066,
+      "repr_dist": 5.497001821997615,
+      "atc": 0.6144228263036046,
+      "mmd": 0.03367036581039429
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "fixed_T": 48,
+  "encoder_id": "erm_fp32",
+  "pretrain_ckpt": "/home/jovyan/pcl_pretrained/erm_pretrained.pt",
+  "method": "erm",
+  "source": "eicu",
+  "target": "mimic",
+  "seed": 42,
+  "task": "mortality_hospital",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 76453,
+  "n_target": 46158,
+  "in_domain": {
+    "auroc": 0.7699539610076218,
+    "auprc": 0.3447266675283081,
+    "brier": 0.1557132601737976,
+    "auroc_ci": [
+      0.7584206239801281,
+      0.7808229471269468
+    ],
+    "auprc_ci": [
+      0.32213875439541073,
+      0.3674165682238932
+    ]
+  },
+  "ood": {
+    "auroc": 0.7482913429972037,
+    "auprc": 0.37473940728309657,
+    "brier": 0.22407746315002441,
+    "auroc_ci": [
+      0.7424532265511598,
+      0.7545632951193113
+    ],
+    "auprc_ci": [
+      0.36301473842716225,
+      0.38788048600926495
+    ]
+  },
+  "elapsed_sec": 1291.7948977947235
+}

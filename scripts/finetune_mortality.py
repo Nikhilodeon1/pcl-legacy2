@@ -2,7 +2,7 @@
 pcl-legacy2, Step 3/4 — mortality task.
 
 Fine-tunes a classification head on top of an already-pretrained encoder
-(ERM/PCL/DRO, reused as-is from URTC — see ../README.md) for in-hospital
+(ERM/PCL/DRO, reused as-is from the prior study — see ../README.md) for in-hospital
 mortality, one (method, source-site, seed) combination per invocation.
 
 Both directions matter here (see README): MIMIC-IV (single hospital) and
@@ -45,7 +45,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
 
-# Where the real URTC-era pretrained encoders live — confirmed on the pod
+# Where the real prior-study pretrained encoders live — confirmed on the pod
 # (13MB each, full-scale, task=sepsis pretraining objective; pretraining
 # is task-agnostic per README so that's fine to reuse for mortality).
 # Override via env var to point at the pod's actual location.
@@ -233,7 +233,7 @@ def main():
     pretrain_path = args.pretrain_ckpt or os.path.join(PRETRAIN_CKPT_DIR, f"{args.method}_pretrained.pt")
     if not os.path.exists(pretrain_path):
         raise FileNotFoundError(
-            f"{pretrain_path} not found — expected the URTC-era pretrained checkpoint here. "
+            f"{pretrain_path} not found — expected the prior-study pretrained checkpoint here. "
             "Do not fall back to training a fresh encoder silently."
         )
     model = fresh_model(seed=args.seed)

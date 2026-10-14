@@ -1,0 +1,41 @@
+{
+  "fixed_T": 48,
+  "encoder_id": "lam0.5_p42",
+  "pretrain_ckpt": "/home/jovyan/pcl_pretrained/sweep/lam0.5_p42.pt",
+  "method": "pcl",
+  "source": "mimic",
+  "target": "eicu",
+  "seed": 42,
+  "task": "mortality_hospital",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 46158,
+  "n_target": 76453,
+  "in_domain": {
+    "auroc": 0.7876535178696278,
+    "auprc": 0.4105367595358662,
+    "brier": 0.20952482521533966,
+    "auroc_ci": [
+      0.7750448909258221,
+      0.7999170842160864
+    ],
+    "auprc_ci": [
+      0.38456253251148537,
+      0.44032601168522306
+    ]
+  },
+  "ood": {
+    "auroc": 0.7100711331381834,
+    "auprc": 0.23688603781421277,
+    "brier": 0.21782559156417847,
+    "auroc_ci": [
+      0.7043906505860598,
+      0.7158824348385621
+    ],
+    "auprc_ci": [
+      0.2292095139646455,
+      0.24443297118322357
+    ]
+  },
+  "elapsed_sec": 932.6613781452179
+}

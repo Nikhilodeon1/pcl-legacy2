@@ -4,7 +4,7 @@ Target: ML4H 2026 Findings. Two tasks (mortality, LOS), both complete.
 Decompensation not attempted — deliberately held (see README / strategy log),
 not a scope cut discovered late.
 
-Reused pretrained ERM/PCL/DRO encoders from URTC as-is (`results_lambda17/ckpt`
+Reused pretrained ERM/PCL/DRO encoders from the prior study as-is (`results_lambda17/ckpt`
 on the pod) — no retraining, per the project's cost premise. Only the
 classification/regression head and two-phase unfreezing schedule were
 fine-tuned per task.
@@ -31,7 +31,7 @@ each serve as source and as zero-shot target.
 | eICU→MIMIC  | 0.819 | 0.808 | 0.819 |
 
 **PCL is the worst method in both directions**, consistently, low seed
-variance (std 0.002–0.014). This is the opposite of the sepsis/URTC headline
+variance (std 0.002–0.014). This is the opposite of the sepsis/the prior study headline
 (PCL beat ERM there).
 
 ### Step 4 — selection-criteria comparison (Spearman rho vs. true OOD AUROC,
@@ -69,7 +69,7 @@ Continuous `los_h` (hours) confirmed cleanly extractable and semantically
 consistent across all three databases (all measure ICU/unit-stay length, not
 hospital-stay) — no field mismatch here, unlike mortality.
 
-PhysioNet DOES have valid LOS (unlike mortality), so this used URTC's
+PhysioNet DOES have valid LOS (unlike mortality), so this used the prior study's
 *original* single-source protocol: train PhysioNet-A, zero-shot on Site B +
 MIMIC + eICU. New regression fine-tune/eval path built (MSE loss on
 log1p(los_h), MAE/RMSE/R² eval — no AUROC equivalent for a continuous target).
@@ -163,9 +163,9 @@ null results.
 
 ## Decision log
 
-- Both directions run for mortality (not URTC's single-source design) —
+- Both directions run for mortality (not the prior study's single-source design) —
   PhysioNet has no mortality label at all.
-- Single-source protocol used for LOS (matches URTC exactly) — PhysioNet does
+- Single-source protocol used for LOS (matches the prior study exactly) — PhysioNet does
   have valid LOS.
 - Decompensation held, not attempted: diminishing marginal value (dense
   time-series is the highest-risk, least-validated output-structure bucket)

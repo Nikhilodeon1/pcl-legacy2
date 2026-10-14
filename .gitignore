@@ -14,3 +14,6 @@ results/revision/cache_gz/
 results/revision/encoders_slim/
 results/*_sweep/
 results/revision/encoders_slim.zip
+
+# internal drafting notes, not for the anonymous repo
+results/revision/AUTHOR_RESPONSE.md

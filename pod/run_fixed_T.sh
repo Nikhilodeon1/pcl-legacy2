@@ -4,7 +4,7 @@
 #   bash pod/run_fixed_T.sh              # everything (27 fine-tunes)
 #   ONLY=los bash pod/run_fixed_T.sh     # or ONLY=mortality
 # Set POD_RATE_USD_PER_H=<rate> to get a running cost line. Estimate: ~190 s/LOS run x 9 + ~340 s/mortality run x 18 on a fast GPU
-# (~2.2 h); a V100 can be slower, so budget 2.5-4 h. STOP and tell the strategy agent if rate x 4h > $5.
+# (~2.2 h); a V100 can be slower, so budget 2.5-4 h. STOP and re-check the budget before continuing if rate x 4h > $5.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 cd "$PCL_REPO"

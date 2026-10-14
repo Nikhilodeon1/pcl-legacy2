@@ -1,7 +1,7 @@
 """
 pcl-legacy2, Step 4 + 5 — mortality task, selection-criteria comparison.
 
-Step 4: URTC's inference-only selection-criteria protocol (violation,
+Step 4: the prior study's inference-only selection-criteria protocol (violation,
 entropy, recon_mse, repr_dist — see _archive/OOD-iclr/gate_check.py) reused
 against the 18 already-fine-tuned mortality checkpoints, plus the two new
 required baselines: ATC and MMD (both inference-time only, no new training).

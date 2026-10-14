@@ -1,7 +1,7 @@
 """
 pcl-legacy2, Step 3/4 — LOS task (continuous, log1p(hours)).
 
-Single-source protocol — matches URTC exactly, unlike mortality which needed
+Single-source protocol — matches the prior study exactly, unlike mortality which needed
 a 2-site-both-directions workaround because PhysioNet lacks mortality labels.
 PhysioNet DOES have valid continuous LOS (`los_h`, hours — see README and
 src/data/physionet2019.py), so: train on PhysioNet Site A, zero-shot eval on
@@ -220,7 +220,7 @@ def main():
     pretrain_path = args.pretrain_ckpt or os.path.join(PRETRAIN_CKPT_DIR, f"{args.method}_pretrained.pt")
     if not os.path.exists(pretrain_path):
         raise FileNotFoundError(
-            f"{pretrain_path} not found — expected the URTC-era pretrained checkpoint here. "
+            f"{pretrain_path} not found — expected the prior-study pretrained checkpoint here. "
             "Do not fall back to training a fresh encoder silently."
         )
     model = fresh_model(seed=args.seed)

@@ -12,7 +12,7 @@ import sys
 
 import torch
 
-SRC = sys.argv[1] if len(sys.argv) > 1 else "C:/Users/nikhi/Codes/IMPORTED/pclCodebase"
+SRC = sys.argv[1] if len(sys.argv) > 1 else "<path-to-prior-study-checkpoints>"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(HERE), "encoders_slim")
 os.makedirs(os.path.join(OUT, "sweep"), exist_ok=True)

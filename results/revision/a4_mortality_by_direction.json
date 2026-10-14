@@ -1,0 +1,146 @@
+[
+ {
+  "domain": "mimic->eicu",
+  "n": 9,
+  "signal": "violation",
+  "rho": -0.39999999999999997,
+  "perm_p": 0.2906,
+  "correct_sign": 1
+ },
+ {
+  "domain": "mimic->eicu",
+  "n": 9,
+  "signal": "recon_mse",
+  "rho": -0.7,
+  "perm_p": 0.04245,
+  "correct_sign": 1
+ },
+ {
+  "domain": "mimic->eicu",
+  "n": 9,
+  "signal": "entropy",
+  "rho": -0.15,
+  "perm_p": 0.7025,
+  "correct_sign": 1
+ },
+ {
+  "domain": "mimic->eicu",
+  "n": 9,
+  "signal": "repr_dist",
+  "rho": -0.33333333333333337,
+  "perm_p": 0.38415,
+  "correct_sign": 1
+ },
+ {
+  "domain": "mimic->eicu",
+  "n": 9,
+  "signal": "mmd",
+  "rho": -0.38333333333333336,
+  "perm_p": 0.31175,
+  "correct_sign": 1
+ },
+ {
+  "domain": "mimic->eicu",
+  "n": 9,
+  "signal": "atc",
+  "rho": 0.15,
+  "perm_p": 0.70995,
+  "correct_sign": 1
+ },
+ {
+  "domain": "eicu->mimic",
+  "n": 9,
+  "signal": "violation",
+  "rho": -0.7333333333333334,
+  "perm_p": 0.028,
+  "correct_sign": 1
+ },
+ {
+  "domain": "eicu->mimic",
+  "n": 9,
+  "signal": "recon_mse",
+  "rho": -0.6833333333333333,
+  "perm_p": 0.0498,
+  "correct_sign": 1
+ },
+ {
+  "domain": "eicu->mimic",
+  "n": 9,
+  "signal": "entropy",
+  "rho": -0.41666666666666663,
+  "perm_p": 0.26855,
+  "correct_sign": 1
+ },
+ {
+  "domain": "eicu->mimic",
+  "n": 9,
+  "signal": "repr_dist",
+  "rho": -0.5166666666666667,
+  "perm_p": 0.1629,
+  "correct_sign": 1
+ },
+ {
+  "domain": "eicu->mimic",
+  "n": 9,
+  "signal": "mmd",
+  "rho": -0.7666666666666667,
+  "perm_p": 0.02065,
+  "correct_sign": 1
+ },
+ {
+  "domain": "eicu->mimic",
+  "n": 9,
+  "signal": "atc",
+  "rho": 0.2833333333333333,
+  "perm_p": 0.46585,
+  "correct_sign": 1
+ },
+ {
+  "domain": "pooled",
+  "n": 18,
+  "signal": "violation",
+  "rho": -0.11042311661506708,
+  "perm_p": 0.66425,
+  "correct_sign": 1
+ },
+ {
+  "domain": "pooled",
+  "n": 18,
+  "signal": "recon_mse",
+  "rho": -0.15583075335397317,
+  "perm_p": 0.53265,
+  "correct_sign": 1
+ },
+ {
+  "domain": "pooled",
+  "n": 18,
+  "signal": "entropy",
+  "rho": -0.5975232198142414,
+  "perm_p": 0.00975,
+  "correct_sign": 1
+ },
+ {
+  "domain": "pooled",
+  "n": 18,
+  "signal": "repr_dist",
+  "rho": 0.6470588235294118,
+  "perm_p": 0.00455,
+  "correct_sign": 0
+ },
+ {
+  "domain": "pooled",
+  "n": 18,
+  "signal": "mmd",
+  "rho": 0.5149638802889577,
+  "perm_p": 0.03085,
+  "correct_sign": 0
+ },
+ {
+  "domain": "pooled",
+  "n": 18,
+  "signal": "atc",
+  "rho": 0.5624355005159958,
+  "perm_p": 0.0173,
+  "correct_sign": 1
+ }
+]

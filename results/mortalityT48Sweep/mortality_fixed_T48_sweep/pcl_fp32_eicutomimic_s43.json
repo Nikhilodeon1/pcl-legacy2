@@ -1,0 +1,41 @@
+{
+  "fixed_T": 48,
+  "encoder_id": "pcl_fp32",
+  "pretrain_ckpt": "/home/jovyan/pcl_pretrained/pcl_pretrained.pt",
+  "method": "pcl",
+  "source": "eicu",
+  "target": "mimic",
+  "seed": 43,
+  "task": "mortality_hospital",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 76453,
+  "n_target": 46158,
+  "in_domain": {
+    "auroc": 0.6089944034500703,
+    "auprc": 0.20498839739995373,
+    "brier": 0.23886415362358093,
+    "auroc_ci": [
+      0.5932652817866865,
+      0.6250282591557631
+    ],
+    "auprc_ci": [
+      0.1888138727954278,
+      0.22345578718355566
+    ]
+  },
+  "ood": {
+    "auroc": 0.6160858069258042,
+    "auprc": 0.24036762968445752,
+    "brier": 0.25814133882522583,
+    "auroc_ci": [
+      0.6082512260686654,
+      0.624160365046301
+    ],
+    "auprc_ci": [
+      0.2316521801142015,
+      0.24979505318942577
+    ]
+  },
+  "elapsed_sec": 1262.2616562843323
+}

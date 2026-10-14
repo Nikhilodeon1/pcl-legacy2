@@ -17,7 +17,7 @@ Layout rule: repo + small results in `~` (persistent, 5 GB). venv, raw data, cac
 
 ## 1. Every new pod (about 5 minutes)
 ```bash
-cd ~ && git clone https://github.com/Nikhilodeon1/pcl-legacy2.git     # or: cd ~/pcl-legacy2 && git pull   (not while a run is going)
+cd ~ && git clone <repository URL>     # or: cd ~/pcl-legacy2 && git pull   (not while a run is going)
 cd ~/pcl-legacy2
 bash pod/setup_env.sh          # venv in /tmp/venv, CUDA torch (cu126: new wheels dropped V100), prints a preflight report
 source pod/env.sh              # in EVERY new shell: activates the venv and exports all paths
@@ -55,7 +55,7 @@ export POD_RATE_USD_PER_H=<rate>          # prints running cost
 bash pod/run_fixed_T.sh                   # ONLY=los or ONLY=mortality to split; resumable; logs in results/revision/logs/
 ```
 Estimate: about 2.2 GPU-hours on a fast GPU (190 s x 9 LOS + 340 s x 18 mortality), so **budget 2.5-4 h on a V100**.
-Gate: if rate x 4 h exceeds $5, stop and tell the strategy agent. Outputs: `results/los_fixed_T24/*.json`, `results/mortality_fixed_T48/*.json`
+Gate: if rate x 4 h exceeds $5, stop and re-check the budget before continuing. Outputs: `results/los_fixed_T24/*.json`, `results/mortality_fixed_T48/*.json`
 (commit the JSONs; checkpoints are gitignored and ~350 MB total, which fits in `~`).
 
 ## 5. Inference audits on the original checkpoints (minutes)
