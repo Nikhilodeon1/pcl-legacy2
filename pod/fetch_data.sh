@@ -1,15 +1,9 @@
-#!/usr/bin/env bash
-# Download ONLY the raw files the loaders read, into $PCL_DATA_ROOT (ephemeral /tmp by default).
-# MIMIC-IV and eICU-CRD are credentialed. Export your PhysioNet login in this shell (never written to disk by this script):
-#   export PHYSIONET_USER=<username>; read -rs PHYSIONET_PASSWORD; export PHYSIONET_PASSWORD
-# Usage: bash pod/fetch_data.sh [physionet mimic eicu]      (default: all three; downloads resume with -c)
-# Skip entirely if you already have the raw data or prebuilt caches elsewhere: set PHYSIONET_DIR/MIMIC_DIR/EICU_DIR or PCL_LEGACY2_CACHE_DIR.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 WHAT=("$@"); [ ${#WHAT[@]} -eq 0 ] && WHAT=(physionet mimic eicu)
 AUTH=()
 if [ -n "${PHYSIONET_USER:-}" ] && [ -n "${PHYSIONET_PASSWORD:-}" ]; then AUTH=(--user "$PHYSIONET_USER" --password "$PHYSIONET_PASSWORD"); fi
-get() { # url destdir
+get() {
   mkdir -p "$2"; wget -c -N -q --show-progress "${AUTH[@]}" -P "$2" "$1"; }
 
 for w in "${WHAT[@]}"; do case "$w" in

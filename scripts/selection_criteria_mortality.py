@@ -1,33 +1,3 @@
-"""
-pcl-legacy2, Step 4 + 5 — mortality task, selection-criteria comparison.
-
-Step 4: the prior study's inference-only selection-criteria protocol (violation,
-entropy, recon_mse, repr_dist — see _archive/OOD-iclr/gate_check.py) reused
-against the 18 already-fine-tuned mortality checkpoints, plus the two new
-required baselines: ATC and MMD (both inference-time only, no new training).
-
-NOT importing gate_check.py directly: its own top-level sys.path.insert(0, ...)
-points at the frozen pre-split archive, which would shadow this repo's
-vendored src/ with the un-fixed copy (dropping mortality_hospital again,
-silently). The scoring logic is reimplemented here against this repo's own
-src/ instead — see VENDORED.md and src/data/dataset.py for why that matters.
-
-Step 5 (encoder-bias confound): recon_mse is a physiology-agnostic signal —
-plain masked-reconstruction error. ERM and DRO never saw the physiology
-constraint at all during pretraining; PCL did. If recon_mse's correlation
-with true OOD AUROC is really just tracking "how good is this encoder at
-masked prediction" rather than anything physiology-specific, it should
-behave differently for {erm, dro} vs {pcl} — this script reports that split
-explicitly, not just the pooled correlation.
-
-Cell = (method, source, seed); "target" is the other site. True OOD AUROC
-comes from the already-saved finetune_mortality.py JSON for that cell, not
-recomputed here.
-
-Usage (same env as finetune_mortality.py; needs the 18 result JSONs +
-matching checkpoints already in ../results/mortality/):
-    python selection_criteria_mortality.py
-"""
 import argparse
 import glob
 import json
@@ -39,11 +9,11 @@ import numpy as np
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-os.environ["PCL_TEST_MODE"] = "0"  # see finetune_mortality.py for why this must be forced
+os.environ["PCL_TEST_MODE"] = "0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
+sys.path.insert(0, _LEGACY2_ROOT) 
 
 RESULTS_DIR = os.path.join(_LEGACY2_ROOT, "results", "mortality")
 FT_CKPT_DIR = os.path.join(RESULTS_DIR, "ckpt")
@@ -58,8 +28,7 @@ ALL_SIGNALS = SIGNALS_LOWER_BETTER + SIGNALS_HIGHER_BETTER
 
 # ── pure helpers (no torch/model needed — testable standalone) ────────────────
 def spearman(a, b):
-    """Spearman rho via Pearson on ranks (avoids a scipy dependency). Copied
-    from gate_check.py's implementation, not imported — see module docstring."""
+   
     a, b = np.asarray(a, float), np.asarray(b, float)
     if len(a) < 3 or np.allclose(a, a[0]) or np.allclose(b, b[0]):
         return float("nan")
@@ -81,7 +50,6 @@ def spearman(a, b):
 
 
 def regret(scores_by_key, auroc_by_key, lower_is_better=True):
-    """True AUROC of the picked key minus the best achievable. 0 = perfect."""
     keys = [k for k in scores_by_key if scores_by_key[k] is not None and auroc_by_key.get(k) is not None]
     if not keys:
         return float("nan"), None
@@ -96,8 +64,7 @@ def _binary_entropy(p, eps=1e-8):
 
 
 def _atc_threshold(confidences, correct):
-    """Garg et al. 2022 ATC: threshold s.t. fraction of SOURCE samples above it
-    equals source accuracy. Confidence = 1 - binary_entropy(p) (higher = more sure)."""
+   
     n = len(confidences)
     acc = float(np.mean(correct))
     order = np.argsort(-confidences)  # descending
@@ -107,9 +74,7 @@ def _atc_threshold(confidences, correct):
 
 
 def _rbf_mmd(x, y, n_sub=500, seed=0):
-    """MMD^2 with RBF kernel, median-heuristic bandwidth. Subsamples both sides
-    to n_sub for tractable O(n^2) — full source/target sites run into the tens
-    of thousands of rows."""
+
     rng = np.random.default_rng(seed)
     if len(x) > n_sub:
         x = x[rng.choice(len(x), n_sub, replace=False)]
@@ -131,7 +96,6 @@ def _rbf_mmd(x, y, n_sub=500, seed=0):
 
     kxx = _k(x, x); kyy = _k(y, y); kxy = _k(x, y)
     m, n = len(x), len(y)
-    # unbiased estimator, excluding diagonal on the within-sample terms
     txx = (kxx.sum() - np.trace(kxx)) / (m * (m - 1)) if m > 1 else 0.0
     tyy = (kyy.sum() - np.trace(kyy)) / (n * (n - 1)) if n > 1 else 0.0
     txy = kxy.mean()
@@ -151,9 +115,7 @@ def score_checkpoint(model, src_loader, tgt_loader, device, seed=0):
 
     @torch.no_grad()
     def _pass(loader, want_correctness=False):
-        """One forward pass. Always collects confidences (target needs them for
-        ATC too, no labels required for that). want_correctness=True also pulls
-        labels, for the source-side ATC threshold calibration only."""
+
         viol_sum, viol_n = 0.0, 0
         ent_sum, ent_n = 0.0, 0
         mse_sum, mse_n = 0.0, 0
@@ -212,7 +174,7 @@ def score_checkpoint(model, src_loader, tgt_loader, device, seed=0):
             reps = model.encode(x, m).mean(dim=1).cpu().numpy()
             out.append(reps)
             n_total += len(reps)
-            if n_total >= n_sub * 3:  # enough to subsample from without reading whole site
+            if n_total >= n_sub * 3: 
                 break
         return np.concatenate(out, axis=0) if out else np.zeros((0, 1))
 
@@ -232,9 +194,6 @@ def score_checkpoint(model, src_loader, tgt_loader, device, seed=0):
     tgt_reps = _pooled_reps(tgt_loader)
     mmd = _rbf_mmd(src_reps, tgt_reps, seed=seed)
 
-    # All target-side signals: violation/entropy/recon_mse are scored on the
-    # unlabeled target site, same as gate_check.py's protocol (score_loader was
-    # called on the OOD loader, not the source).
     return {
         "violation": tgt["violation"],
         "entropy": tgt["entropy"],
@@ -268,7 +227,6 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Load + cache each site once (same cache finetune_mortality.py wrote).
     def _cached_site(site):
         cache_path = os.path.join(CACHE_DIR, f"{site}_frac{args.fraction}.pkl")
         if not os.path.exists(cache_path):
@@ -327,8 +285,6 @@ def main():
         return spearman([c[sig] for c in cs], [c["true_auroc"] for c in cs])
 
     rhos_all = {s: _rho(s, cells) for s in ALL_SIGNALS}
-    # Step 5: split recon_mse by whether the method ever saw the physiology
-    # constraint during pretraining (pcl) or not (erm, dro).
     constrained = [c for c in cells if c["method"] == "pcl"]
     unconstrained = [c for c in cells if c["method"] in ("erm", "dro")]
     recon_mse_by_method_type = {

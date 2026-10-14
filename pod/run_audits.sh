@@ -1,7 +1,3 @@
-#!/usr/bin/env bash
-# Inference-only audits on the ORIGINAL fine-tuned checkpoints (a few minutes of GPU). Each step skips itself if its inputs are missing.
-#   bash pod/run_audits.sh
-# Needs: full caches (pod/build_caches.sh), results/los/ckpt (9) and/or results/mortality/ckpt (18) -- copy them into the repo first.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 cd "$PCL_REPO"

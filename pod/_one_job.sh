@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-# One fine-tune job; called by run_parallel.sh. Args: KIND(los|mort) METHOD SEED [SRC]   (env: FIXEDT_LOS=24 FIXEDT_MORT=48)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh" >/dev/null
 cd "$PCL_REPO"

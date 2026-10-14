@@ -1,8 +1,3 @@
-#!/usr/bin/env bash
-# Build the venv in /tmp (ephemeral) -- rerun this on every new pod (a few minutes).
-#   bash pod/setup_env.sh
-# GPU: V100 (sm_70). PyTorch wheels built against CUDA >= 12.8 dropped Volta, so default to the cu126 index.
-#   TORCH_INDEX=https://download.pytorch.org/whl/cu124 bash pod/setup_env.sh      # if the driver is older
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 TORCH_INDEX="${TORCH_INDEX:-https://download.pytorch.org/whl/cu126}"
@@ -11,7 +6,6 @@ PYVER="${PCL_PYTHON_VERSION:-3.11}"
 echo "--- disk/memory ---"; df -h "$HOME" /tmp | sed 's/^/  /'; free -g | sed 's/^/  /' || true
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || echo "WARNING: nvidia-smi not found"
 
-# a crash mid-install leaves a venv that looks fine but is incomplete: only trust it if the ready-marker was written
 if [ -d "$PCL_VENV" ] && [ ! -f "$PCL_VENV/.pcl_ready" ]; then echo "--- removing incomplete venv from an interrupted setup ---"; rm -rf "$PCL_VENV"; fi
 if [ ! -x "$PCL_VENV/bin/python" ]; then
   if python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' 2>/dev/null; then

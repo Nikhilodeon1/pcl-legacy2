@@ -1,10 +1,3 @@
-#!/usr/bin/env bash
-# fp32 (AMP off) re-run of the fixed-T=48 mortality fine-tunes, written to results/mortality_fixed_T48_sweep/<method>_fp32_*.json.
-# Why: fp16 AMP made PCL fine-tunes collapse to AUROC 0.500 (diag: no overflow; fp32 test run recovered, see results/revision/SURPRISES.md).
-# All three arms are re-run in fp32 so the comparison is matched in precision. PCL first.
-#   JOBS=3 bash pod/run_fp32_mort.sh            # all 18 (pcl, erm, dro x 3 seeds x 2 sources)
-#   JOBS=3 METHODS="pcl" bash pod/run_fp32_mort.sh
-# Resumable: a run whose result JSON exists exits immediately (finetune_mortality.py), so just re-run the same command after a crash/refresh.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 cd "$PCL_REPO"

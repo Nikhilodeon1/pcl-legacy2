@@ -1,32 +1,3 @@
-"""
-pcl-legacy2, Step 4 — LOS task, selection-criteria comparison.
-
-Single-source setup (unlike mortality's both-directions): PhysioNet-A is the
-only source, physionet_b/mimic/eicu are all targets. Cell = (method, seed,
-target) = 3 methods x 3 seeds x 3 targets = 27 cells, using the 9 already
-fine-tuned checkpoints from finetune_los.py.
-
-Only 4 of the 6 mortality signals apply here: violation, recon_mse,
-repr_dist, mmd. Entropy (defined on sigmoid(logits), a probability) and ATC
-(defined via a binary correct/incorrect notion calibrated to accuracy) have
-no standard non-hacky continuous-target analog — reported as N/A rather than
-forced. MMD is still in: it's the actually-required new baseline that does
-transfer.
-
-True performance metric correlated against: R^2 (higher is better, same role
-AUROC played for mortality — MAE/RMSE are also in each cell for reference).
-
-Computes BOTH pooled and within-target Spearman correlation from the start
-this time — mortality's first pass pooled across its 2 directions and got
-misleadingly wrong signs on 3 of 6 signals; no reason to make that mistake
-twice when the target dimension here could plausibly show the same pattern
-(physionet_b is near-domain, mimic/eicu are far — very different score
-scales likely).
-
-Usage (needs the 9 finetune_los.py result JSONs + checkpoints, and the
-cached physionet/mimic/eicu data — all already built):
-    python selection_criteria_los.py
-"""
 import argparse
 import glob
 import json
@@ -42,7 +13,7 @@ os.environ["PCL_TEST_MODE"] = "0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
+sys.path.insert(0, _LEGACY2_ROOT)
 
 RESULTS_DIR = os.path.join(_LEGACY2_ROOT, "results", "los")
 FT_CKPT_DIR = os.path.join(RESULTS_DIR, "ckpt")
@@ -51,12 +22,9 @@ OUT_PATH = os.path.join(RESULTS_DIR, "selection_criteria.json")
 
 TASK = "los_h"
 TARGETS = ("physionet_b", "mimic", "eicu")
-SIGNALS = ["violation", "recon_mse", "repr_dist", "mmd"]  # all lower-is-better
+SIGNALS = ["violation", "recon_mse", "repr_dist", "mmd"]
 
 
-# ── pure helpers, same as selection_criteria_mortality.py — copied, not
-# imported (keeps this script standalone; both are small enough it's not
-# worth a shared-module refactor under time pressure) ──────────────────────
 def spearman(a, b):
     a, b = np.asarray(a, float), np.asarray(b, float)
     if len(a) < 3 or np.allclose(a, a[0]) or np.allclose(b, b[0]):
@@ -268,7 +236,7 @@ def main():
         if device == "cuda":
             torch.cuda.empty_cache()
 
-    # ── pooled + within-target Spearman (both, from the start — see docstring) ──
+    # ── pooled + within-target Spearman  ──
     def _rho(sig, subset):
         cs = [c for c in subset if c[sig] == c[sig]]
         return spearman([c[sig] for c in cs], [c["true_r2"] for c in cs])

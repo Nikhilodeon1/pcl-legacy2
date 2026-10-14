@@ -1,20 +1,3 @@
-"""
-pcl-legacy2 — paired significance checks for the paper's two headline claims:
-  (1) mortality: is PCL actually worse than ERM/DRO, or is the ~0.01-0.02
-      AUROC gap just noise? (review item 1 & 3)
-  (2) LOS: are ERM/PCL/DRO actually tied, or is the <=0.02 R^2 spread hiding
-      a real difference? (review item 1 & 3, same test as (1))
-
-No GPU/model needed — reads only the already-saved result JSONs. Pure numpy,
-no scipy dependency (avoids a possible missing-package surprise on the pod):
-implements the paired t-test formula directly and reports the t-statistic
-against the standard df=2 critical value (4.303, two-tailed alpha=0.05)
-rather than computing an exact p-value, since a p-value from 3 data points
-implies more precision than 3 data points can actually support.
-
-Usage (run from wherever the result JSONs are, e.g. on the pod):
-    python significance_check.py
-"""
 import glob
 import json
 import os
@@ -28,15 +11,11 @@ _LEGACY2_ROOT = os.path.dirname(_HERE)
 MORT_DIR = os.path.join(_LEGACY2_ROOT, "results", "mortality")
 LOS_DIR = os.path.join(_LEGACY2_ROOT, "results", "los")
 
-T_CRIT_DF2 = 4.303  # two-tailed alpha=0.05, df=2 (n=3 paired samples)
+T_CRIT_DF2 = 4.303 
 
 
 def paired_ttest(a, b):
-    """a, b: sequences of matched (same-seed) values. Returns (mean_diff, sd,
-    t, df, cohen_d, diffs). cohen_d = mean_diff / sd (of the paired
-    differences) -- the effect-size figure cited alongside every t-stat in
-    the paper, since t alone conflates effect size with sample size and n=3
-    barely has a sample size to speak of."""
+
     d = np.asarray(a, float) - np.asarray(b, float)
     n = len(d)
     df = n - 1
@@ -63,7 +42,7 @@ def check_mortality():
     print("=" * 78)
     files = glob.glob(os.path.join(MORT_DIR, "*.json"))
     files = [f for f in files if os.path.basename(f) != "selection_criteria.json"]
-    rows = {}  # (direction, method) -> {seed: auroc}
+    rows = {}
     for f in files:
         d = json.load(open(f))
         direction = f"{d['source']}->{d['target']}"
@@ -92,7 +71,7 @@ def check_los():
     print("=" * 78)
     files = glob.glob(os.path.join(LOS_DIR, "*.json"))
     files = [f for f in files if os.path.basename(f) != "selection_criteria.json"]
-    rows = {}  # (target, method) -> {seed: r2}
+    rows = {}
     all_targets = set()
     for f in files:
         d = json.load(open(f))

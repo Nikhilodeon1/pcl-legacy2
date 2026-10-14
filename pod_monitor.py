@@ -1,44 +1,3 @@
-"""
-pod_monitor.py — background GPU-utilization watchdog for RunPod scripts.
-
-Shared across every PCL sub-project (chat1_protocol, pcl-legacy2, deadpcl, ...).
-Import from any script regardless of which sub-project directory it lives in;
-this file sits at the repo root next to data/ and venv/ for exactly that reason.
-
-What it does: starts a daemon thread that polls `nvidia-smi` every few seconds
-for the life of the process. When it sees a SUSTAINED (not momentary) mismatch
-between what you're paying for and what's actually running, it prints a loud,
-impossible-to-miss banner:
-
-  * GPU sits near-idle for IDLE_MIN minutes straight -> you're almost
-    certainly downloading/parsing/preprocessing data, not training, and
-    you're paying GPU-pod price for CPU work. Tells you to switch DOWN to
-    a cheap pod.
-  * After that, GPU utilization comes back up and STAYS up for ACTIVE_MIN
-    minutes -> real training resumed. Tells you to switch BACK UP to the
-    GPU pod, in case you moved down for the data-load phase and forgot.
-
-Both directions matter (that's the point): it should stop you overspending
-on an idle expensive pod, AND stop you wasting wall-clock time training on
-an underpowered one.
-
-Usage — one line, near the top of main(), before the expensive part starts:
-
-    from pod_monitor import watch_pod
-    watch_pod()   # non-blocking, spawns a daemon thread, returns immediately
-
-Safe everywhere: if `nvidia-smi` isn't found (local dev machine, CPU-only
-box, sandboxed CI), it disables itself silently after one failed probe and
-costs nothing. There is no harm in leaving the call in scripts that never
-run on a GPU pod at all.
-
-Tunable via env vars if the default cadence doesn't fit a given run:
-    POD_MONITOR_POLL_SEC    (default 15)   how often to poll nvidia-smi
-    POD_MONITOR_IDLE_MIN    (default 5)    sustained idle minutes before alert
-    POD_MONITOR_ACTIVE_MIN  (default 2)    sustained active minutes before alert
-    POD_MONITOR_REMINDER_MIN (default 10)  re-print the banner if state persists
-    POD_MONITOR_UTIL_PCT    (default 10)   GPU% threshold separating idle/active
-"""
 import os
 import shutil
 import subprocess
@@ -71,7 +30,6 @@ _BAR = "=" * 70
 
 
 def _read_gpu_util():
-    """Max utilization.gpu (%) across all visible GPUs, or None if unreadable."""
     try:
         out = subprocess.run(
             ["nvidia-smi", "--query-gpu=utilization.gpu",
@@ -91,7 +49,7 @@ def _read_gpu_util():
 def _monitor_loop(poll_sec, idle_min, active_min, reminder_min, util_pct, verbose):
     idle_streak_start = None
     active_streak_start = None
-    state = None            # None -> "idle" -> "active" -> "idle" -> ...
+    state = None
     last_alert_ts = 0.0
     consecutive_read_failures = 0
 
@@ -138,9 +96,7 @@ _lock = threading.Lock()
 
 def watch_pod(poll_sec=None, idle_min=None, active_min=None, reminder_min=None,
               util_pct=None, verbose=False):
-    """Start the background pod-switch watchdog. Idempotent: calling this more
-    than once in the same process is a no-op after the first call. Returns
-    immediately; does nothing if nvidia-smi isn't available (e.g. local dev)."""
+
     global _started
     with _lock:
         if _started:
@@ -166,7 +122,6 @@ def watch_pod(poll_sec=None, idle_min=None, active_min=None, reminder_min=None,
 
 
 if __name__ == "__main__":
-    # Manual smoke test: run this file directly on a GPU pod to watch it fire.
     watch_pod(verbose=True)
     print("pod_monitor running standalone — Ctrl+C to stop.")
     while True:

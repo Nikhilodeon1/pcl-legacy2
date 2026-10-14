@@ -1,8 +1,3 @@
-"""
-Pod preflight. Read-only except for a tiny GPU smoke test. Run after `source pod/env.sh`:
-    python pod/preflight.py
-Exit code 1 if something REQUIRED for the fixed-observation reruns is missing.
-"""
 import os
 import shutil
 import sys
@@ -39,7 +34,7 @@ try:
         name = torch.cuda.get_device_name(0)
         cap = torch.cuda.get_device_capability(0)
         line("OK", f"GPU {name} sm_{cap[0]}{cap[1]} {torch.cuda.get_device_properties(0).total_memory / 2**30:.0f} GB")
-        try:   # a kernel-image mismatch (e.g. Volta + a CUDA-12.8 wheel) only shows up when something runs
+        try:
             x = torch.randn(256, 256, device="cuda")
             with torch.amp.autocast("cuda"):
                 y = (x @ x).float().sum().item()

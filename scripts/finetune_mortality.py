@@ -1,28 +1,3 @@
-"""
-pcl-legacy2, Step 3/4 — mortality task.
-
-Fine-tunes a classification head on top of an already-pretrained encoder
-(ERM/PCL/DRO, reused as-is from the prior study — see ../README.md) for in-hospital
-mortality, one (method, source-site, seed) combination per invocation.
-
-Both directions matter here (see README): MIMIC-IV (single hospital) and
-eICU-CRD (200+ hospitals) are structurally different enough that direction is
-not interchangeable, so this is run source=mimic and source=eicu separately,
-not averaged or treated as one design.
-
-Uses `mortality_hospital`, NOT `mortality` — eICU's `mortality` field is
-ICU-unit-level, not hospital-level; using it here would silently compare two
-different quantities across sites. See src/data/eicu.py and dataset.py.
-
-Resumable: skips and exits 0 if the result JSON already exists (pass
---overwrite to force a rerun). Run the first combination alone first — its
-wall-clock time is the only real cost estimate for the full 18-run sweep
-before committing further budget.
-
-Usage (env vars MIMIC_DIR / EICU_DIR must already be exported, e.g. via
-runpod_env.sh):
-    python finetune_mortality.py --method erm --source mimic --seed 42
-"""
 import argparse
 import json
 import logging
@@ -33,22 +8,13 @@ import time
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-# This script only ever loads production-scale pretrained checkpoints
-# (results_lambda17/ckpt, d_model=256/6 layers). TEST_MODE changes the model
-# architecture itself (d_model=64/2 layers), not just data volume — running
-# with it on doesn't fail fast, it silently builds an incompatible model and
-# only errors after both full datasets have already been read from disk.
-# Must be set before ANY `from config import ...` anywhere in this process.
+
 os.environ["PCL_TEST_MODE"] = "0"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
+sys.path.insert(0, _LEGACY2_ROOT)  
 
-# Where the real prior-study pretrained encoders live — confirmed on the pod
-# (13MB each, full-scale, task=sepsis pretraining objective; pretraining
-# is task-agnostic per README so that's fine to reuse for mortality).
-# Override via env var to point at the pod's actual location.
 PRETRAIN_CKPT_DIR = os.environ.get(
     "PCL_LEGACY2_PRETRAIN_DIR",
     os.path.join(_LEGACY2_ROOT, "results_lambda17", "ckpt"),
@@ -62,10 +28,7 @@ TASK = "mortality_hospital"
 
 
 def _load_site(site, fraction, seed):
-    """Cached: the full MIMIC/eICU CSV read takes minutes and this script is
-    invoked up to 18 times across the sweep (each site is source in 9 of
-    them, target in the other 9) — without a cache every run re-pays that
-    cost in pure CPU-bound GPU-pod idle time."""
+
     os.makedirs(CACHE_DIR, exist_ok=True)
     cache_path = os.path.join(CACHE_DIR, f"{site}_frac{fraction}.pkl")
     if os.path.exists(cache_path):
@@ -143,10 +106,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     os.makedirs(FT_CKPT_DIR, exist_ok=True)
 
-    # Upfront, not reactive: pod_monitor's idle-GPU banner below only fires
-    # after ~5 min of paying GPU price for CPU-only work. This fires at
-    # process start, before a single row is read, whenever either site isn't
-    # cached yet — the exact situation that cost real money last time.
+
     import torch
     _uncached = [s for s in (args.source, target)
                  if not os.path.exists(os.path.join(CACHE_DIR, f"{s}_frac{args.fraction}.pkl"))]
@@ -161,9 +121,8 @@ def main():
         )
 
     from pod_monitor import watch_pod
-    watch_pod(verbose=True)  # backup: loud reminder if GPU sits idle 5+ min
-                              # anyway (e.g. the warning above was missed), or
-                              # if you're still on a cheap pod once training starts
+    watch_pod(verbose=True) 
+                              
 
     import torch
     from torch.utils.data import DataLoader
@@ -174,8 +133,7 @@ def main():
     from src.eval.evaluate_utils import evaluate_model, run_finetuning
     from src.training.train_utils import load_state_dict_flexible
 
-    # Fail in <1s, not after loading two full datasets: the real checkpoints
-    # are always d_model=256/6 layers. Anything else can't load them.
+
     if TEST_MODE or D_MODEL != 256 or N_LAYERS != 6:
         raise RuntimeError(
             f"config resolved to TEST_MODE={TEST_MODE}, D_MODEL={D_MODEL}, N_LAYERS={N_LAYERS} — "

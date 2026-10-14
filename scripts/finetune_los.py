@@ -1,31 +1,3 @@
-"""
-pcl-legacy2, Step 3/4 — LOS task (continuous, log1p(hours)).
-
-Single-source protocol — matches the prior study exactly, unlike mortality which needed
-a 2-site-both-directions workaround because PhysioNet lacks mortality labels.
-PhysioNet DOES have valid continuous LOS (`los_h`, hours — see README and
-src/data/physionet2019.py), so: train on PhysioNet Site A, zero-shot eval on
-Site B + MIMIC-IV + eICU. 3 methods x 3 seeds = 9 runs total (half of
-mortality's 18), each producing 3 zero-shot scores instead of 1.
-
-Reuses the pretrained ERM/PCL/DRO encoders as-is, same as finetune_mortality.py
-(pretraining is task-agnostic). Only difference in the fine-tune/eval machinery:
-run_finetuning_regression / evaluate_model_regression (evaluate_utils.py) —
-MSE loss on log1p(los_h), MAE/RMSE/R^2 eval — since there's no AUROC equivalent
-for a continuous target. Those are new, additive functions; the existing
-binary run_finetuning/evaluate_model (vendored from the reboot project's src/,
-see VENDORED.md) are untouched.
-
-IMPORTANT — separate cache dir from mortality's: mortality's cache
-(results/mortality/cache/{mimic,eicu}_frac1.0.pkl) predates the `los_h` field
-being added to the loaders. Reusing it here would silently zero-fill los_h via
-ICUDataset's .get(..., 0) default — wrong data, not an error. This script uses
-its own results/los/cache/ instead, forcing a fresh read that includes los_h.
-
-Usage (same env as finetune_mortality.py; PHYSIONET_DIR/MIMIC_DIR/EICU_DIR):
-    python finetune_los.py --method erm --seed 42
-    python finetune_los.py --method erm --seed 42 --cache-only   # data-load only, run on a cheap pod first
-"""
 import argparse
 import json
 import logging
@@ -36,11 +8,11 @@ import time
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-os.environ["PCL_TEST_MODE"] = "0"  # see finetune_mortality.py — must precede any config import
+os.environ["PCL_TEST_MODE"] = "0" 
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _LEGACY2_ROOT = os.path.dirname(_HERE)
-sys.path.insert(0, _LEGACY2_ROOT)  # config.py, src/, pod_monitor.py vendored here
+sys.path.insert(0, _LEGACY2_ROOT)  
 
 PRETRAIN_CKPT_DIR = os.environ.get(
     "PCL_LEGACY2_PRETRAIN_DIR",
@@ -49,26 +21,21 @@ PRETRAIN_CKPT_DIR = os.environ.get(
 
 OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", "los")
 FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
-CACHE_DIR = os.environ.get("PCL_LEGACY2_CACHE_DIR") or os.path.join(OUT_DIR, "cache")  # NOT mortality's old cache — see module docstring
+CACHE_DIR = os.environ.get("PCL_LEGACY2_CACHE_DIR") or os.path.join(OUT_DIR, "cache") 
 
 TASK = "los_h"
 DATASETS = ("physionet", "mimic", "eicu")
 
 
 def _cached_load(name, cache_fraction, loader_fn, *args, **kwargs):
-    # cache_fraction is named to NOT collide with a `fraction=` kwarg meant
-    # for loader_fn (both mimic4/eicu/physionet2019 loaders take one) — a
-    # plain `fraction` param here shadowed that and crashed with
-    # "got multiple values for argument 'fraction'".
+
     os.makedirs(CACHE_DIR, exist_ok=True)
     cache_path = os.path.join(CACHE_DIR, f"{name}_frac{cache_fraction}.pkl")
     if os.path.exists(cache_path):
         with open(cache_path, "rb") as fp:
             cached = pickle.load(fp)
         if len(cached) == 0:
-            # A previous run cached an empty result (e.g. the source data was
-            # missing/misconfigured at the time) with no error — an empty
-            # cache is never valid to trust silently. Delete it and re-read.
+
             logging.warning(f"[CACHE] {cache_path} is empty (0 samples) — treating as stale, deleting and re-reading.")
             os.remove(cache_path)
         else:
@@ -117,9 +84,9 @@ def main():
     if args.fixed_T:
         OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"los_fixed_T{args.fixed_T}")
     if args.encoder_id:
-        OUT_DIR = OUT_DIR + "_sweep"      # sweep runs never mix with the main 3-method results
+        OUT_DIR = OUT_DIR + "_sweep" 
     FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
-    if os.environ.get("PCL_LEGACY2_CKPT_ROOT"):   # keep big checkpoints out of a small persistent home
+    if os.environ.get("PCL_LEGACY2_CKPT_ROOT"):
         FT_CKPT_DIR = os.path.join(os.environ["PCL_LEGACY2_CKPT_ROOT"], os.path.basename(OUT_DIR), "ckpt")
 
     tag = f"{args.encoder_id or args.method}_s{args.seed}"
@@ -196,10 +163,7 @@ def main():
                             "Check PHYSIONET_DIR / training_setA.")
 
     ds_a = ICUDataset(site_a)
-
-    # Plain random patient-level split — NOT make_patient_split_loaders, which
-    # stratifies by a binary label; los_h is continuous, stratification doesn't
-    # apply the same way.
+    
     rng = np.random.default_rng(args.seed)
     idx = rng.permutation(len(ds_a))
     n_train = int(len(ds_a) * 0.8)

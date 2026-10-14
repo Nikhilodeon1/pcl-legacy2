@@ -1,0 +1,13 @@
+direction,criterion,regret_ckpt
+mimic->eicu,violation,0.006893747587017329
+mimic->eicu,recon_mse,0.02742484363514608
+mimic->eicu,entropy,0.0
+mimic->eicu,repr_dist,0.0
+mimic->eicu,mmd,0.006893747587017329
+mimic->eicu,atc,0.0
+eicu->mimic,violation,0.005248823079100684
+eicu->mimic,recon_mse,0.00614438811458029
+eicu->mimic,entropy,0.005248823079100684
+eicu->mimic,repr_dist,0.0008124453908857632
+eicu->mimic,mmd,0.0008124453908857632
+eicu->mimic,atc,0.005248823079100684

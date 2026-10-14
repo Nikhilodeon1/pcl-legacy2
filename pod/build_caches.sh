@@ -1,8 +1,3 @@
-#!/usr/bin/env bash
-# Build the FULL preprocessed caches (physionet, mimic, eicu) with the original loaders, in parallel (CPU-bound, ~45-60 min wall on 16 cores).
-# Output: $PCL_LEGACY2_CACHE_DIR/{physionet,mimic,eicu}_frac1.0.pkl -- the exact names finetune_los.py / finetune_mortality.py / revision scripts read.
-# Memory: 3 parallel builds should fit in 64 GB; if a build dies (check logs / `free -g`), rerun with SEQUENTIAL=1.
-# This is CPU work on a GPU-priced pod; if you can, do it on a CPU-only pod and persist the result (see bottom).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 mkdir -p "$PCL_LEGACY2_CACHE_DIR" "$PCL_REPO/results/revision/logs"
