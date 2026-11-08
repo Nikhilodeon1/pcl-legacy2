@@ -54,22 +54,25 @@ for mod in ("numpy", "pandas", "sklearn", "scipy"):
 
 home, tmp = os.path.expanduser("~"), "/tmp"
 for p, min_gb, why in ((home, 0.3, "persistent: repo + small results only (checkpoints/preds go to /tmp)"),
-                       (tmp, 40, "ephemeral: venv, raw data, caches")):
+                       (tmp, 15, "ephemeral: venv, raw data, caches")):
     if os.path.exists(p):
         free = shutil.disk_usage(p).free / 2**30
         need(free >= min_gb, f"{p} free {free:.1f} GB ({why})", f"{p} free {free:.1f} GB < {min_gb} GB ({why})", required=False)
+
+PHYS_ONLY = os.environ.get("PCL_PHYSIONET_ONLY", "1") == "1"
+min_ram_gb = 4 if PHYS_ONLY else 24
 try:
     mem = [l for l in open("/proc/meminfo") if l.startswith("MemAvailable")][0].split()[1]
-    need(int(mem) / 2**20 >= 24, f"RAM available {int(mem) / 2**20:.0f} GB", "RAM available < 24 GB: full eICU/MIMIC caches may not fit")
+    need(int(mem) / 2**20 >= min_ram_gb, f"RAM available {int(mem) / 2**20:.1f} GB",
+         f"RAM available < {min_ram_gb} GB")
 except Exception:
     pass
 
 env = {k: os.environ.get(k, "") for k in ("PHYSIONET_DIR", "MIMIC_DIR", "EICU_DIR", "PCL_LEGACY2_PRETRAIN_DIR", "PCL_LEGACY2_CACHE_DIR")}
-PHYS_ONLY = os.environ.get("PCL_PHYSIONET_ONLY", "1") == "1"
 print("\n-- data (PhysioNet-only mode)" if PHYS_ONLY else "\n-- data")
 cd = env["PCL_LEGACY2_CACHE_DIR"]
 need(os.path.exists(os.path.join(cd, "physionet_frac1.0.pkl")) or os.path.isdir(os.path.join(env["PHYSIONET_DIR"], "training_setA")),
-     "PhysioNet cache or raw data present", "PhysioNet missing -> bash pod/fetch_data.sh physionet && bash pod/build_caches.sh")
+     "PhysioNet cache or raw data present", "PhysioNet missing -> run colab/setup.sh or pod/safe_start.sh")
 if PHYS_ONLY:
     for n in ("mimic", "eicu"):
         present = os.path.exists(os.path.join(cd, f"{n}_frac1.0.pkl")) or os.path.exists(os.path.expanduser(f"~/pcl_cache_gz/{n}_frac1.0.pkl.gz"))
