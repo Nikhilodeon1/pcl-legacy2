@@ -1,6 +1,9 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
-WHAT=("$@"); [ ${#WHAT[@]} -eq 0 ] && WHAT=(physionet mimic eicu)
+WHAT=("$@"); [ ${#WHAT[@]} -eq 0 ] && WHAT=(physionet)
+if [ "${PCL_PHYSIONET_ONLY:-1}" = "1" ]; then
+  for w in "${WHAT[@]}"; do [ "$w" = "physionet" ] || { echo "REFUSED: '$w' is credentialed data; it must not be placed on the pod (PCL_PHYSIONET_ONLY=1)."; exit 3; }; done
+fi
 AUTH=()
 if [ -n "${PHYSIONET_USER:-}" ] && [ -n "${PHYSIONET_PASSWORD:-}" ]; then AUTH=(--user "$PHYSIONET_USER" --password "$PHYSIONET_PASSWORD"); fi
 get() {

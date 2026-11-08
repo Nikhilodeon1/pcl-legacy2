@@ -12,6 +12,12 @@ say "------ safe_start $(date) host=$(hostname)"
 say "GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo 'none')"
 step "setup_env"      bash pod/setup_env.sh                          || { say "setup_env failed"; exit 1; }
 source pod/env.sh
-step "restore_caches" bash pod/restore_caches.sh                     || { say "restore_caches failed"; exit 1; }
+if [ -s "$HOME/pcl_cache_gz/physionet_frac1.0.pkl.gz" ]; then
+  step "restore_caches" bash pod/restore_caches.sh                   || { say "restore_caches failed"; exit 1; }
+else
+  # PhysioNet 2019 is open access: download it here and build the cache (no credentialed data on the pod)
+  [ -d "$PHYSIONET_DIR/training_setA" ] || step "fetch_physionet" bash pod/fetch_data.sh physionet || { say "fetch failed"; exit 1; }
+  step "build_cache"    bash pod/build_caches.sh                       || { say "build_caches failed"; exit 1; }
+fi
 step "preflight"      python pod/preflight.py
 say "DONE. Full log: $LOGF"

@@ -28,6 +28,8 @@ sys.path.insert(0, ROOT)
 name = sys.argv[1]
 fraction = float(sys.argv[2])
 seed = int(sys.argv[3]) if len(sys.argv) > 3 else 42
+if name in ("mimic", "eicu") and os.environ.get("PCL_PHYSIONET_ONLY", "0") == "1":
+    raise SystemExit("REFUSED: %s is credentialed data; build its cache only on the approved local machine (PCL_PHYSIONET_ONLY=1)." % name)
 
 from config import PHYSIONET_DIR, MIMIC_DIR, EICU_DIR  # noqa: E402
 from src.data.physionet2019 import load_physionet2019  # noqa: E402

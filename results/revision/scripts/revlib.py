@@ -29,6 +29,8 @@ def cache_dir():
 
 
 def load_cache(name, frac, seed=42, cache_dir=None):
+    if name in ("mimic", "eicu") and os.environ.get("PCL_PHYSIONET_ONLY", "0") == "1":
+        raise RuntimeError("REFUSED: %s is credentialed data and must not be used on the pod (PCL_PHYSIONET_ONLY=1)" % name)
     d = cache_dir or globals()["cache_dir"]()
     cands = [os.path.join(d, f"{name}_frac{frac}_s{seed}.pkl"), os.path.join(d, f"{name}_frac{frac}.pkl")]
     for p in cands:

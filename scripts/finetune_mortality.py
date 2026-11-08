@@ -58,6 +58,8 @@ def _load_site(site, fraction, seed):
 
 
 def main():
+    if os.environ.get("PCL_PHYSIONET_ONLY", "0") == "1":
+        raise SystemExit("REFUSED: mortality fine-tuning trains and evaluates on MIMIC-IV / eICU-CRD (credentialed). Run it on the approved local machine, not on the pod (PCL_PHYSIONET_ONLY=1).")
     ap = argparse.ArgumentParser()
     ap.add_argument("--method", choices=["erm", "pcl", "dro"], required=True)
     ap.add_argument("--source", choices=["mimic", "eicu"], required=True,

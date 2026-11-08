@@ -2,7 +2,8 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 DEST="${PCL_PERSIST_DIR:-$HOME/pcl_cache_gz}"
 mkdir -p "$DEST"
-for d in physionet mimic eicu; do
+DS=(physionet mimic eicu); [ "${PCL_PHYSIONET_ONLY:-1}" = "1" ] && DS=(physionet)
+for d in "${DS[@]}"; do
   src="$PCL_LEGACY2_CACHE_DIR/${d}_frac1.0.pkl"
   [ -e "$src" ] || { echo "missing $src (run pod/build_caches.sh first)"; exit 1; }
   free_mb=$(df -Pm "$DEST" | awk 'NR==2{print $4}')

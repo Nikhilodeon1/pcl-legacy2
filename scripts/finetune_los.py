@@ -25,6 +25,10 @@ CACHE_DIR = os.environ.get("PCL_LEGACY2_CACHE_DIR") or os.path.join(OUT_DIR, "ca
 
 TASK = "los_h"
 DATASETS = ("physionet", "mimic", "eicu")
+# On the pod MIMIC-IV / eICU-CRD (credentialed) must not be present: only PhysioNet 2019 is used and the far targets are skipped.
+PHYS_ONLY = os.environ.get("PCL_PHYSIONET_ONLY", "0") == "1"
+if PHYS_ONLY:
+    DATASETS = ("physionet",)
 
 
 def _cached_load(name, cache_fraction, loader_fn, *args, **kwargs):
@@ -75,6 +79,8 @@ def main():
                      help="Revision G1 remedy: fixed-observation protocol. Every stay sees exactly the first T hours "
                           "(identical padding), stays with LOS < T are dropped, head pools at hour T-1. "
                           "Writes to results/{task}_fixed_T{T}/ and leaves the original results untouched.")
+    ap.add_argument("--results-subdir", default=None,
+                     help="write results/<subdir>/ instead of the default los_fixed_T{T}[_sweep] folder (used by the phase-2 pretraining experiments)")
     ap.add_argument("--cache-only", action="store_true",
                      help="Load + cache PhysioNet/MIMIC/eICU, then exit before touching the GPU. "
                           "Same pattern as finetune_mortality.py's --cache-only.")
@@ -85,6 +91,8 @@ def main():
         OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", f"los_fixed_T{args.fixed_T}")
     if args.encoder_id:
         OUT_DIR = OUT_DIR + "_sweep" 
+    if args.results_subdir:
+        OUT_DIR = os.path.join(_LEGACY2_ROOT, "results", args.results_subdir)
     FT_CKPT_DIR = os.path.join(OUT_DIR, "ckpt")
     if os.environ.get("PCL_LEGACY2_CKPT_ROOT"):
         FT_CKPT_DIR = os.path.join(os.environ["PCL_LEGACY2_CKPT_ROOT"], os.path.basename(OUT_DIR), "ckpt")
@@ -141,8 +149,12 @@ def main():
     t0 = time.time()
 
     pn_samples = _cached_load("physionet", args.fraction, load_physionet2019, PHYSIONET_DIR, fraction=args.fraction, seed=args.seed)
-    mimic_samples = _cached_load("mimic", args.fraction, load_mimic4, MIMIC_DIR, fraction=args.fraction, seed=args.seed)
-    eicu_samples = _cached_load("eicu", args.fraction, load_eicu, EICU_DIR, fraction=args.fraction, seed=args.seed)
+    if PHYS_ONLY:
+        logging.info("[PHYSIONET-ONLY] skipping MIMIC-IV and eICU-CRD (credentialed data are not allowed on this machine)")
+        mimic_samples, eicu_samples = [], []
+    else:
+        mimic_samples = _cached_load("mimic", args.fraction, load_mimic4, MIMIC_DIR, fraction=args.fraction, seed=args.seed)
+        eicu_samples = _cached_load("eicu", args.fraction, load_eicu, EICU_DIR, fraction=args.fraction, seed=args.seed)
 
     if args.cache_only:
         logging.info(f"[CACHE-ONLY] All three datasets cached in {time.time() - t0:.0f}s. "

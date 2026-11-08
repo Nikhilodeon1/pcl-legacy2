@@ -65,28 +65,20 @@ except Exception:
     pass
 
 env = {k: os.environ.get(k, "") for k in ("PHYSIONET_DIR", "MIMIC_DIR", "EICU_DIR", "PCL_LEGACY2_PRETRAIN_DIR", "PCL_LEGACY2_CACHE_DIR")}
-print("\n-- required for fixed-T reruns --")
+PHYS_ONLY = os.environ.get("PCL_PHYSIONET_ONLY", "1") == "1"
+print("\n-- data (PhysioNet-only mode)" if PHYS_ONLY else "\n-- data")
+cd = env["PCL_LEGACY2_CACHE_DIR"]
+need(os.path.exists(os.path.join(cd, "physionet_frac1.0.pkl")) or os.path.isdir(os.path.join(env["PHYSIONET_DIR"], "training_setA")),
+     "PhysioNet cache or raw data present", "PhysioNet missing -> bash pod/fetch_data.sh physionet && bash pod/build_caches.sh")
+if PHYS_ONLY:
+    for n in ("mimic", "eicu"):
+        present = os.path.exists(os.path.join(cd, f"{n}_frac1.0.pkl")) or os.path.exists(os.path.expanduser(f"~/pcl_cache_gz/{n}_frac1.0.pkl.gz"))
+        need(not present, f"no {n} cache on the pod", f"{n} cache FOUND on the pod: credentialed derivative, delete it (data use agreement)")
+else:
+    caches = {n: os.path.exists(os.path.join(cd, f"{n}_frac1.0.pkl")) for n in ("physionet", "mimic", "eicu")}
+    line("OK" if all(caches.values()) else "WARN", f"caches in {cd}: {caches}")
 pre = env["PCL_LEGACY2_PRETRAIN_DIR"]
 have_pre = [m for m in ("erm", "pcl", "dro") if os.path.exists(os.path.join(pre, f"{m}_pretrained.pt"))]
-need(len(have_pre) == 3, f"pretrained encoders in {pre}", f"pretrained encoders missing in {pre}: have {have_pre}. Put erm/pcl/dro_pretrained.pt there "
-     "(from the old results_lambda17/ckpt). Without them NOTHING can be fine-tuned.")
-cd = env["PCL_LEGACY2_CACHE_DIR"]
-caches = {n: os.path.exists(os.path.join(cd, f"{n}_frac1.0.pkl")) for n in ("physionet", "mimic", "eicu")}
-if all(caches.values()):
-    line("OK", f"full caches present in {cd}")
-else:
-    line("WARN", f"caches missing in {cd}: {[n for n, v in caches.items() if not v]}  -> bash pod/build_caches.sh (needs raw data)")
-    raw = {"PHYSIONET_DIR": os.path.isdir(os.path.join(env["PHYSIONET_DIR"], "training_setA")),
-           "MIMIC_DIR": os.path.exists(os.path.join(env["MIMIC_DIR"], "icu", "chartevents.csv.gz")),
-           "EICU_DIR": os.path.exists(os.path.join(env["EICU_DIR"], "patient.csv.gz"))}
-    for k, v in raw.items():
-        need(v or caches[{"PHYSIONET_DIR": "physionet", "MIMIC_DIR": "mimic", "EICU_DIR": "eicu"}[k]], f"{k} raw data present", f"{k}={env[k]} not found -> bash pod/fetch_data.sh")
-
-print("\n-- optional (original-protocol audits) --")
-repo = os.environ.get("PCL_REPO", ".")
-n_los = len([f for f in os.listdir(os.path.join(repo, "results/los/ckpt"))]) if os.path.isdir(os.path.join(repo, "results/los/ckpt")) else 0
-n_mort = len([f for f in os.listdir(os.path.join(repo, "results/mortality/ckpt"))]) if os.path.isdir(os.path.join(repo, "results/mortality/ckpt")) else 0
-line("OK" if n_los == 9 else "WARN", f"original LOS fine-tuned ckpts: {n_los}/9 (results/los/ckpt)")
-line("OK" if n_mort == 18 else "WARN", f"original mortality fine-tuned ckpts: {n_mort}/18 (results/mortality/ckpt) -- without them rerun the 18 original-protocol fine-tunes")
+line("OK" if have_pre else "INFO", f"pretrained encoders in {pre}: {have_pre or 'none (fine: the pretraining scripts make their own)'}")
 print("\nPREFLIGHT", "PASSED" if ok_all else "FAILED (fix the FAIL lines above)")
 sys.exit(0 if ok_all else 1)

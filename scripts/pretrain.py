@@ -1,0 +1,138 @@
+"""
+Unified pretraining driver (PhysioNet 2019 Site A only, unless --extra-unlabeled is given).
+
+This is the driver that was missing from the repository: it reproduces the encoder recipe used throughout the project
+(6 layers, d_model 256, 8 heads, 30 epochs, batch 64, mask probability 0.3, lambda warm-up over 40% of the epochs, EMA loss balancer,
+AdamW lr 3e-4, cosine to 0.1x) and makes every previously implicit choice an explicit argument.
+
+  lambda = 0 is the ERM arm and goes through the SAME code path (src.training.train_utils.run_pretraining) as the PCL arms, so ERM and PCL differ
+  only in the constraint weight (the separate run_erm_pretraining routine differs in grad-clip, see the Dead PCL discrepancy log).
+
+  --precision fp32  disables fp16 autocast (PCL_DISABLE_AMP=1); --precision amp keeps the project default on GPU. The earlier encoders were
+  pretrained with AMP on; whether that matters for the near-constant PCL representation is one of the questions this driver exists to answer.
+
+  --extra-unlabeled physionet_b  adds the Site B stays (inputs only, no labels are used in pretraining) to the training set. This is the
+  controlled version of the "unlabeled target data in pretraining" confound, tested with PhysioNet only (no credentialed data).
+
+Outputs (in --out-dir):  <tag>.pt (model state dict only, ~13 MB) and <tag>.json (config, loss history, timing, representation diagnostics).
+Resumable: exits immediately if <tag>.json exists (use --overwrite to redo).
+
+Example:  python scripts/pretrain.py --lam 0.5 --seed 42 --precision fp32 --out-dir ~/pcl_pretrained/phase2
+Smoke test (CPU, seconds):  python scripts/pretrain.py --lam 0.5 --seed 1 --epochs 2 --max-samples 300 --out-dir /tmp/smoke
+"""
+import argparse
+import json
+import logging
+import os
+import pickle
+import sys
+import time
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_HERE)
+sys.path.insert(0, _ROOT)
+sys.path.insert(0, _HERE)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+
+def make_tag(lam, seed, precision, extra, warmup):
+    t = f"lam{lam:g}_p{seed}_{precision}"
+    if extra:
+        t += "_leak" + "".join(w[0] + w[-1] for w in extra)  # e.g. physionet_b -> _leakpb
+    if abs(warmup - 0.4) > 1e-9:
+        t += f"_wu{warmup:g}"
+    return t
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--lam", type=float, required=True, help="constraint weight lambda (0 = ERM, same code path)")
+    ap.add_argument("--seed", type=int, required=True, help="sets the initialisation AND the Site A 80/20 split (as in the Dead PCL runs)")
+    ap.add_argument("--precision", choices=["amp", "fp32"], default="amp")
+    ap.add_argument("--epochs", type=int, default=30)
+    ap.add_argument("--warmup-fraction", type=float, default=0.4)
+    ap.add_argument("--extra-unlabeled", nargs="*", default=[], choices=["physionet_b"],
+                    help="add these sites' stays to the pretraining set (inputs only)")
+    ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--cache-dir", default=os.environ.get("PCL_LEGACY2_CACHE_DIR"))
+    ap.add_argument("--max-samples", type=int, default=None, help="smoke test: use only this many Site A stays")
+    ap.add_argument("--overwrite", action="store_true")
+    args = ap.parse_args()
+
+    if args.precision == "fp32":
+        os.environ["PCL_DISABLE_AMP"] = "1"          # must be set before config is imported
+    os.environ["PCL_TEST_MODE"] = "0"
+    tag = make_tag(args.lam, args.seed, args.precision, args.extra_unlabeled, args.warmup_fraction)
+    os.makedirs(args.out_dir, exist_ok=True)
+    out_json = os.path.join(args.out_dir, tag + ".json")
+    out_pt = os.path.join(args.out_dir, tag + ".pt")
+    if os.path.exists(out_json) and not args.overwrite:
+        logging.info(f"[RESUME] {out_json} exists, skipping")
+        return
+
+    import numpy as np
+    import torch
+    from torch.utils.data import ConcatDataset, DataLoader
+    import config
+    from config import BATCH_SIZE, MASK_PROB, NUM_WORKERS, PIN_MEMORY, USE_AMP, D_MODEL, N_LAYERS
+    from src.baselines import fresh_model
+    from src.data.dataset import ICUDataset, make_patient_split_loaders
+    from src.losses.pcl_loss import PhysiologicalConstraintLoss
+    from src.training.train_utils import load_state_dict_flexible, run_pretraining
+    from repr_diag import diagnose
+
+    if D_MODEL != 256 or N_LAYERS != 6:
+        raise RuntimeError(f"config resolved D_MODEL={D_MODEL}, N_LAYERS={N_LAYERS}; the recipe needs 256 / 6 (TEST_MODE?)")
+    if (args.precision == "fp32") == bool(USE_AMP):
+        raise RuntimeError(f"precision={args.precision} but config.USE_AMP={USE_AMP}: fp32 needs PCL_DISABLE_AMP=1 to take effect")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    logging.info(f"tag={tag} device={device} USE_AMP={USE_AMP} lambda={args.lam} seed={args.seed} epochs={args.epochs}")
+
+    cache = os.path.join(args.cache_dir or "", "physionet_frac1.0.pkl")
+    if os.path.exists(cache):
+        pn = pickle.load(open(cache, "rb"))
+    else:
+        from src.data.physionet2019 import load_physionet2019
+        pn, _ = load_physionet2019(config.PHYSIONET_DIR, fraction=1.0, seed=args.seed)
+    site_a = [s for s in pn if s["site_id"] == 0]
+    extra = [s for s in pn if s["site_id"] == 1] if "physionet_b" in args.extra_unlabeled else []
+    if args.max_samples:
+        site_a, extra = site_a[:args.max_samples], extra[:args.max_samples]
+    logging.info(f"Site A stays: {len(site_a)}; extra unlabeled stays: {len(extra)}")
+
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    ds = ICUDataset(site_a)
+    train_loader, val_loader = make_patient_split_loaders(ds, train_frac=0.8, batch_size=BATCH_SIZE, seed=args.seed, stratify_key="sepsis",
+                                                          num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
+    if extra:
+        train_ds = ConcatDataset([train_loader.dataset, ICUDataset(extra)])
+        train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True, num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
+
+    model = fresh_model(seed=args.seed)
+    tmp_ckpt = out_pt + ".full.tmp"
+    t0 = time.time()
+    history = run_pretraining(model, PhysiologicalConstraintLoss(), train_loader, val_loader, n_epochs=args.epochs, lam=args.lam,
+                              mask_prob=MASK_PROB, device=device, save_path=tmp_ckpt, warmup_fraction=args.warmup_fraction)
+    secs = time.time() - t0
+
+    model.load_state_dict(load_state_dict_flexible(tmp_ckpt, "cpu"))   # best-val-masked-loss epoch
+    torch.save(model.state_dict(), out_pt)
+    os.remove(tmp_ckpt)
+
+    diag = diagnose(model, site_a, device=device, hours=(23, 47), n=min(4000, len(site_a)))
+    clean = {k: [float(x) for x in v] for k, v in history.items() if isinstance(v, list)}
+    json.dump({
+        "tag": tag, "lambda": args.lam, "seed": args.seed, "precision": args.precision, "epochs": args.epochs,
+        "warmup_fraction": args.warmup_fraction, "mask_prob": MASK_PROB, "batch_size": BATCH_SIZE,
+        "extra_unlabeled": args.extra_unlabeled, "n_site_a": len(site_a), "n_extra": len(extra),
+        "device": device, "torch": torch.__version__, "seconds": secs, "repr_diag_site_a": diag, "history": clean,
+        "checkpoint": os.path.basename(out_pt),
+    }, open(out_json, "w"), indent=1)
+    d = diag["47"]
+    logging.info(f"done in {secs / 60:.1f} min; best epoch weights -> {out_pt}; repr(h=47): L2={d['mean_l2']:.1f} spread={d['spread']:.3f} "
+                 f"const_frac={d['const_frac']:.3f}")
+
+
+if __name__ == "__main__":
+    main()

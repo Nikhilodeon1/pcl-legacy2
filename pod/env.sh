@@ -14,6 +14,9 @@ export PHYSIONET_DIR="${PHYSIONET_DIR:-$PCL_DATA_ROOT/physionet2019}"
 export MIMIC_DIR="${MIMIC_DIR:-$PCL_DATA_ROOT/mimiciv/3.1}"
 export EICU_DIR="${EICU_DIR:-$PCL_DATA_ROOT/eicu-crd/2.0}"
 
+# Credentialed data (MIMIC-IV, eICU-CRD) and patient-level derivatives of them must NOT be on the pod (data use agreements).
+# PCL_PHYSIONET_ONLY=1 (default) makes the fine-tune scripts skip/refuse those datasets and the pod scripts handle PhysioNet 2019 only.
+export PCL_PHYSIONET_ONLY="${PCL_PHYSIONET_ONLY:-1}"
 export PCL_LEGACY2_PRETRAIN_DIR="${PCL_LEGACY2_PRETRAIN_DIR:-$HOME/pcl_pretrained}"
 
 if [ -z "${PCL_LEGACY2_CACHE_DIR:-}" ]; then
