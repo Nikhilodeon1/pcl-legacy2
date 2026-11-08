@@ -1,4 +1,5 @@
 import os
+import pickle
 import shutil
 import sys
 
@@ -71,8 +72,21 @@ except Exception:
 env = {k: os.environ.get(k, "") for k in ("PHYSIONET_DIR", "MIMIC_DIR", "EICU_DIR", "PCL_LEGACY2_PRETRAIN_DIR", "PCL_LEGACY2_CACHE_DIR")}
 print("\n-- data (PhysioNet-only mode)" if PHYS_ONLY else "\n-- data")
 cd = env["PCL_LEGACY2_CACHE_DIR"]
-need(os.path.exists(os.path.join(cd, "physionet_frac1.0.pkl")) or os.path.isdir(os.path.join(env["PHYSIONET_DIR"], "training_setA")),
-     "PhysioNet cache or raw data present", "PhysioNet missing -> run colab/setup.sh or pod/safe_start.sh")
+pn_pkl = os.path.join(cd, "physionet_frac1.0.pkl")
+if os.path.exists(pn_pkl):
+    try:
+        pn = pickle.load(open(pn_pkl, "rb"))
+        n_a = sum(1 for s in pn if s.get("site_id") == 0)
+        n_b = sum(1 for s in pn if s.get("site_id") == 1)
+        need(n_a == 10381 and n_b == 14779,
+             f"PhysioNet cache verified: {len(pn)} stays (Site A={n_a}, Site B={n_b})",
+             f"PhysioNet cache INCOMPLETE: got Site A={n_a}, Site B={n_b} (expected 10381 and 14779) -> rerun colab/setup.sh")
+    except Exception as e:
+        need(False, "", f"Failed to read {pn_pkl}: {e}")
+else:
+    need(os.path.isdir(os.path.join(env["PHYSIONET_DIR"], "training_setA")) and os.path.isdir(os.path.join(env["PHYSIONET_DIR"], "training_setB")),
+         "PhysioNet raw data directories present", "PhysioNet cache and raw data missing -> run colab/setup.sh or pod/safe_start.sh")
+
 if PHYS_ONLY:
     for n in ("mimic", "eicu"):
         present = os.path.exists(os.path.join(cd, f"{n}_frac1.0.pkl")) or os.path.exists(os.path.expanduser(f"~/pcl_cache_gz/{n}_frac1.0.pkl.gz"))
