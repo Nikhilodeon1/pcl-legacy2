@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "lam0_p44_fp32_leakpb",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2/lam0_p44_fp32_leakpb.pt",
+  "method": "pcl",
+  "seed": 44,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 11.122636474056005,
+    "rmse_hours": 23.164690585309135,
+    "r2": 0.05306332077756748,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 11.097689751924571,
+      "rmse_hours": 23.562782428569825,
+      "r2": -0.05148323838369806,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 516.3560466766357
+}

@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "lam0_p45_fp32",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2/lam0_p45_fp32.pt",
+  "method": "pcl",
+  "seed": 45,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 11.752257596198106,
+    "rmse_hours": 25.572436487493704,
+    "r2": 0.041533745057305005,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.647552918162685,
+      "rmse_hours": 22.81792586167437,
+      "r2": 0.013944097285475854,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 437.86838698387146
+}

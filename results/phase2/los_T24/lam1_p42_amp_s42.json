@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "lam1_p42_amp",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2/lam1_p42_amp.pt",
+  "method": "pcl",
+  "seed": 42,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 10.623575983165166,
+    "rmse_hours": 23.186689831212068,
+    "r2": 0.037451576824401034,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.806231319936245,
+      "rmse_hours": 23.107562041255125,
+      "r2": -0.01124750533213259,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 350.8531346321106
+}
