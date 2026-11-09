@@ -90,7 +90,7 @@ def pretrain_val_step(batch, model, pcl_loss_fn, lam=LAMBDA_PCL, mask_prob=MASK_
             L_total = L_masked.float() + lam * L_pcl
     return {'L_total': L_total.item(), 'L_masked': L_masked.item(), 'L_pcl': L_pcl.item()}
 
-def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, lr=0.0003, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu', save_path='pcl_pretrained.pt', log_every=1, warmup_fraction=0.3, use_site_adversary=False, lam_site=0.1):
+def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, lr=0.0003, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu', save_path='pcl_pretrained.pt', log_every=1, warmup_fraction=0.3, use_site_adversary=False, lam_site=0.1, use_balancer=True):
     model = model.to(device)
     site_adversary = None
     if use_site_adversary and lam > 0:
@@ -102,11 +102,11 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
     optimizer = torch.optim.AdamW(all_params, lr=lr, weight_decay=0.0001)
     scaler = torch.amp.GradScaler('cuda', enabled=USE_AMP)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs, eta_min=lr * 0.1)
-    pcl_balancer = PCLLossBalancer(target_ratio=1.0)
+    pcl_balancer = PCLLossBalancer(target_ratio=1.0) if use_balancer else None
     warmup_epochs = max(2, int(n_epochs * warmup_fraction))
     history = {'train_total': [], 'train_masked': [], 'train_pcl': [], 'val_total': [], 'val_masked': [], 'val_pcl': [], 'train_MAP': [], 'train_PP': [], 'train_SI': [], 'train_HH': [], 'train_SpO2': [], 'effective_lam': [], 'balance_ratio': []}
     best_val_masked = float('inf')
-    logging.info(f'Starting pretraining — {n_epochs} epochs, λ={lam} (warmup over {warmup_epochs} epochs), device={device}')
+    logging.info(f'Starting pretraining — {n_epochs} epochs, λ={lam} (balancer={use_balancer}, warmup over {warmup_epochs} epochs), device={device}')
     logging.info(f"{'Epoch':<8} {'Train Total':<14} {'Train Masked':<14} {'Train PCL':<12} {'Val Total':<12} {'λ_eff':<10} {'LR'}")
     logging.info('─' * 85)
     for epoch in range(1, n_epochs + 1):
@@ -140,81 +140,18 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
         history['val_total'].append(v_total)
         history['val_masked'].append(v_masked)
         history['val_pcl'].append(v_pcl)
+        history['train_MAP'].append(np.mean(train_metrics['L_MAP']))
+        history['train_PP'].append(np.mean(train_metrics['L_PP']))
+        history['train_SI'].append(np.mean(train_metrics['L_SI']))
+        history['train_HH'].append(np.mean(train_metrics['L_HH']))
+        history['train_SpO2'].append(np.mean(train_metrics['L_SpO2']))
         history['effective_lam'].append(lam_eff)
-        history['balance_ratio'].append(pcl_balancer.ratio_ema if pcl_balancer.ratio_ema else 1.0)
-        for cname in ['MAP', 'PP', 'SI', 'HH', 'SpO2']:
-            key = f'train_{cname}'
-            history[key].append(np.nanmean(train_metrics[f'L_{cname}']) if train_metrics[f'L_{cname}'] else np.nan)
-        if epoch % log_every == 0:
-            logging.info(f'{epoch:<8} {t_total:<14.6f} {t_masked:<14.6f} {t_pcl:<12.6f} {v_total:<12.6f} {lam_eff:<10.4f} {cur_lr:.2e}')
-            if epoch % 5 == 0 and train_metrics['L_MAP']:
-                logging.info(f" Constraints → MAP:{np.nanmean(train_metrics['L_MAP']):.5f} PP:{np.nanmean(train_metrics['L_PP']):.5f} SI:{np.nanmean(train_metrics['L_SI']):.5f} HH:{np.nanmean(train_metrics['L_HH']):.5f} SpO2:{np.nanmean(train_metrics['L_SpO2']):.5f}")
+        history['balance_ratio'].append(float(pcl_balancer.ratio_ema) if (pcl_balancer and pcl_balancer.ratio_ema is not None) else 1.0)
+        if epoch % log_every == 0 or epoch == n_epochs:
+            logging.info(f'{epoch:<8} {t_total:<14.4f} {t_masked:<14.4f} {t_pcl:<12.4f} {v_total:<12.4f} {lam_eff:<10.3f} {cur_lr:.2e}')
         if v_masked < best_val_masked:
             best_val_masked = v_masked
-            save_checkpoint(model, optimizer, epoch, history, save_path)
-    logging.info(f'\nPretraining complete. Best val masked loss: {best_val_masked:.6f}')
-    logging.info(f'Checkpoint saved to: {save_path}')
+            torch.save(model.state_dict(), save_path)
+            logging.info(f'  -> Checkpoint saved (val_masked={best_val_masked:.4f})')
+    logging.info(f'Pretraining complete. Best val_masked: {best_val_masked:.4f}')
     return history
-
-def save_checkpoint(model, optimizer, epoch, history, path):
-    torch.save({'epoch': epoch, 'model_state': model.state_dict(), 'optimizer_state': optimizer.state_dict(), 'history': history}, path)
-
-def load_checkpoint(model, path, optimizer=None, device='cpu'):
-    ckpt = torch.load(path, map_location=device, weights_only=False)
-    model.load_state_dict(ckpt['model_state'])
-    if optimizer:
-        optimizer.load_state_dict(ckpt['optimizer_state'])
-    logging.info(f"Loaded checkpoint from epoch {ckpt['epoch']}")
-    return ckpt['history']
-
-def load_state_dict_flexible(path, device='cpu'):
-    o = torch.load(path, map_location=device, weights_only=False)
-    if isinstance(o, dict) and 'model_state' in o:
-        return o['model_state']
-    return o
-
-def plot_loss_curves(history, save_path=None):
-    import matplotlib.pyplot as plt
-    epochs = range(1, len(history['train_total']) + 1)
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-    axes[0].plot(epochs, history['train_total'], label='Train')
-    axes[0].plot(epochs, history['val_total'], label='Val')
-    axes[0].set_title('Total Loss')
-    axes[0].legend()
-    axes[0].set_xlabel('Epoch')
-    axes[1].plot(epochs, history['train_masked'], label='Train')
-    axes[1].plot(epochs, history['val_masked'], label='Val')
-    axes[1].set_title('Masked Prediction Loss')
-    axes[1].legend()
-    axes[1].set_xlabel('Epoch')
-    axes[2].plot(epochs, history['train_pcl'], label='Train')
-    axes[2].plot(epochs, history['val_pcl'], label='Val')
-    axes[2].set_title('PCL Loss')
-    axes[2].legend()
-    axes[2].set_xlabel('Epoch')
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path, dpi=200, bbox_inches='tight')
-    plt.close()
-
-def plot_constraint_curves(history, save_path=None):
-    import matplotlib.pyplot as plt
-    epochs = range(1, len(history['train_total']) + 1)
-    fig, axes = plt.subplots(1, 2, figsize=(14, 4))
-    for cname in ['MAP', 'PP', 'SI', 'HH', 'SpO2']:
-        key = f'train_{cname}'
-        if key in history and history[key]:
-            axes[0].plot(epochs, history[key], label=cname)
-    axes[0].set_title('Per-Constraint Losses')
-    axes[0].set_xlabel('Epoch')
-    axes[0].legend()
-    axes[0].set_yscale('log')
-    if 'effective_lam' in history and history['effective_lam']:
-        axes[1].plot(epochs, history['effective_lam'], 'k-', linewidth=2)
-        axes[1].set_title('Effective λ (Warmup Schedule)')
-        axes[1].set_xlabel('Epoch')
-        axes[1].set_ylabel('λ')
-    plt.tight_layout()
-    if save_path:
-        plt.savefig(save_path, dpi=200, bbox_inches='tight')
-    plt.close()
