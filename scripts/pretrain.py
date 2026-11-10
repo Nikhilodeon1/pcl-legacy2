@@ -93,10 +93,11 @@ def main():
     if args.matched_volume_total:
         # Resample Site A stays with replacement to match total volume (e.g. 25,160)
         rng = np.random.default_rng(args.seed)
-        n_needed = args.matched_volume_total - len(site_a)
-        resampled_idx = rng.choice(len(site_a), size=n_needed, replace=True)
-        extra = [site_a[i] for i in resampled_idx]
-        logging.info(f"[MATCHED-VOLUME] Resampled {len(extra)} Site A stays to match total volume {args.matched_volume_total}")
+        n_needed = max(0, args.matched_volume_total - len(site_a))
+        if len(site_a) > 0 and n_needed > 0:
+            resampled_idx = rng.choice(len(site_a), size=n_needed, replace=True)
+            extra = [site_a[i] for i in resampled_idx]
+            logging.info(f"[MATCHED-VOLUME] Resampled {len(extra)} Site A stays to match total volume {args.matched_volume_total}")
 
     logging.info(f"Site A stays: {len(site_a)}; extra unlabeled stays: {len(extra)}")
 

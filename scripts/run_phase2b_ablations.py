@@ -12,6 +12,7 @@ import argparse
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -33,20 +34,21 @@ def main():
     os.makedirs(os.path.join(_ROOT, "results", "phase2b", "pretrain"), exist_ok=True)
     os.makedirs(os.path.join(_ROOT, "results", "phase2b", "sepsis"), exist_ok=True)
     os.makedirs(os.path.join(_ROOT, "results", "phase2b", "los_T24"), exist_ok=True)
+    os.makedirs(os.path.join(_ROOT, "results", "revision", "logs"), exist_ok=True)
 
     commands = []
     for s in args.seeds:
         # 1. Matched-Volume Pretraining Control:
         # Tag: erm_matched_vol_p{s}
         tag_mv = f"erm_matched_vol_p{s}"
-        commands.append((tag_mv, s, ["python3", "scripts/pretrain.py", "--lam", "0.0", "--seed", str(s),
+        commands.append((tag_mv, s, [sys.executable, "scripts/pretrain.py", "--lam", "0.0", "--seed", str(s),
                                      "--precision", "fp32", "--matched-volume-total", "25160",
                                      "--out-dir", args.out_dir]))
 
         # 2. Loss-Balancer Ablation (Fixed weight without balancer):
         # Tag: pcl_fixed_nobalance_p{s}
         tag_fnb = f"pcl_fixed_nobalance_p{s}"
-        commands.append((tag_fnb, s, ["python3", "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
+        commands.append((tag_fnb, s, [sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
                                       "--precision", "fp32", "--no-balancer",
                                       "--out-dir", args.out_dir]))
 
@@ -73,7 +75,11 @@ def main():
             logging.info(f"Done pretrain {tag} in {(time.time()-t0)/60:.1f} min")
 
         # Copy to results
-        subprocess.run(["cp", "-f", json_path, os.path.join(_ROOT, "results", "phase2b", "pretrain", f"{tag}.json")])
+        dest_json = os.path.join(_ROOT, "results", "phase2b", "pretrain", f"{tag}.json")
+        try:
+            shutil.copy2(json_path, dest_json)
+        except Exception as e:
+            logging.warning(f"Failed to copy {json_path} to {dest_json}: {e}")
 
         # Sepsis fine-tune
         sep_out = os.path.join(_ROOT, "results", "phase2b", "sepsis")
@@ -83,7 +89,7 @@ def main():
             env = os.environ.copy()
             env["PCL_DISABLE_AMP"] = "1"
             with open(log_path, "a") as lf:
-                subprocess.run(["python3", "scripts/finetune_sepsis.py", "--pretrain-ckpt", pt_path,
+                subprocess.run([sys.executable, "scripts/finetune_sepsis.py", "--pretrain-ckpt", pt_path,
                                 "--encoder-id", tag, "--seed", str(seed), "--out-dir", sep_out],
                                env=env, stdout=lf, stderr=subprocess.STDOUT)
 
@@ -95,7 +101,7 @@ def main():
             env = os.environ.copy()
             env["PCL_DISABLE_AMP"] = "1"
             with open(log_path, "a") as lf:
-                subprocess.run(["python3", "scripts/finetune_los.py", "--method", "pcl", "--seed", str(seed),
+                subprocess.run([sys.executable, "scripts/finetune_los.py", "--method", "pcl", "--seed", str(seed),
                                 "--fixed-T", "24", "--pretrain-ckpt", pt_path, "--encoder-id", tag,
                                 "--results-subdir", "phase2b/los_T24"],
                                env=env, stdout=lf, stderr=subprocess.STDOUT)
