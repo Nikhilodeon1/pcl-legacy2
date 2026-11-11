@@ -139,7 +139,9 @@ def mode_length(args):
     model.add_classification_head("sepsis")
     if args.fixed_T:
         model.cls_heads["sepsis"].fixed_index = args.fixed_T - 1
-    ck = os.path.join(os.environ.get("PCL_LEGACY2_CKPT_ROOT", "/tmp/pcl_ckpt"), "phase2_length", f"{args.tag}_T{args.fixed_T or 0}_s{args.seed}.pt")
+    import tempfile
+    default_ck_root = os.path.join(tempfile.gettempdir(), "pcl_ckpt") if os.name == "nt" else "/tmp/pcl_ckpt"
+    ck = os.path.join(os.environ.get("PCL_LEGACY2_CKPT_ROOT", default_ck_root), "phase2_length", f"{args.tag}_T{args.fixed_T or 0}_s{args.seed}.pt")
     os.makedirs(os.path.dirname(ck), exist_ok=True)
     run_finetuning(model, train_loader, val_loader, "sepsis", n_epochs=args.epochs or FINETUNE_EPOCHS, device=device, save_path=ck)
     model.load_state_dict(load_state_dict_flexible(ck, device))

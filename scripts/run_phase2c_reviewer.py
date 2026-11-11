@@ -1,10 +1,17 @@
 """
 Driver for Phase 2c Reviewer Experiments:
-1. VICReg Anti-Collapse Intervention (pcl_varreg1_p{seed}):
-   - PCL lambda=0.5 (FP32) + VICReg variance & covariance regularization (--var-reg 1.0)
-   - Tests whether restoring centered effective rank during pretraining recovers Site B OOD transfer.
+1. Steps-Matched PCL Control (pcl_matched_vol_p{seed}):
+   - PCL lambda=0.5 (FP32) on 25,160 resampled Site A stays (10,800 steps, matched to ERM matched-vol).
+   - Completes the 2x2 factorial design (Source vs Target Exposure x ERM vs PCL).
 2. Supervised Transformer From Scratch (scratch_p{seed}):
    - Same 6-layer, d=256 Transformer trained directly on Sepsis and LOS T=24 without pretraining.
+3. VICReg Anti-Collapse Intervention (pcl_varreg1_p{seed}):
+   - PCL lambda=0.5 (FP32) + VICReg variance & covariance regularization (--var-reg 1.0).
+   - Tests whether restoring centered effective rank during pretraining recovers Site B OOD transfer.
+4. MAP-Only Constraint Ablation (pcl_maponly_p{seed}):
+   - PCL lambda=0.5 (FP32) with only the algebraic MAP constraint active (HH=0, SpO2=0).
+5. No-HH Constraint Ablation (pcl_nohh_p{seed}):
+   - PCL lambda=0.5 (FP32) with MAP and Severinghaus SpO2 active, omitting Henderson-Hasselbalch (HH=0).
 """
 import argparse
 import concurrent.futures
@@ -36,23 +43,35 @@ def main():
 
     jobs = []
     for s in args.seeds:
-        # 1. VICReg Anti-Collapse Intervention (Pretrain + Sepsis FT + LOS FT)
-        tag_vr = f"pcl_varreg1_p{s}"
-        jobs.append(("pretrain_and_ft", tag_vr, s, [
-            sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
-            "--precision", "fp32", "--var-reg", "1.0", "--out-dir", args.out_dir
-        ]))
-        # 2. Steps-Matched PCL Control (10,800 gradient steps on resampled Site A)
+        # 1. Steps-Matched PCL Control (10,800 gradient steps on resampled Site A)
         tag_pmv = f"pcl_matched_vol_p{s}"
         jobs.append(("pretrain_and_ft", tag_pmv, s, [
             sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
             "--precision", "fp32", "--matched-volume-total", "25160", "--out-dir", args.out_dir
         ]))
-        # 3. Supervised Transformer From Scratch (No Pretrain, Sepsis FT + LOS FT)
+        # 2. Supervised Transformer From Scratch (No Pretrain, Sepsis FT + LOS FT)
         tag_sc = f"scratch_p{s}"
         jobs.append(("scratch", tag_sc, s, None))
+        # 3. VICReg Anti-Collapse Intervention (Pretrain + Sepsis FT + LOS FT)
+        tag_vr = f"pcl_varreg1_p{s}"
+        jobs.append(("pretrain_and_ft", tag_vr, s, [
+            sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
+            "--precision", "fp32", "--var-reg", "1.0", "--out-dir", args.out_dir
+        ]))
+        # 4. MAP-Only Constraint Ablation (HH=0, SpO2=0)
+        tag_mo = f"pcl_maponly_p{s}"
+        jobs.append(("pretrain_and_ft", tag_mo, s, [
+            sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
+            "--precision", "fp32", "--constraints", "map_only", "--out-dir", args.out_dir
+        ]))
+        # 5. No-HH Constraint Ablation (MAP + SpO2, HH=0)
+        tag_nh = f"pcl_nohh_p{s}"
+        jobs.append(("pretrain_and_ft", tag_nh, s, [
+            sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
+            "--precision", "fp32", "--constraints", "nohh", "--out-dir", args.out_dir
+        ]))
 
-    logging.info(f"Queued {len(jobs)} Phase 2c jobs ({len(args.seeds)} seeds x 3 conditions)")
+    logging.info(f"Queued {len(jobs)} Phase 2c jobs ({len(args.seeds)} seeds x 5 conditions)")
 
     def run_one(item):
         kind, tag, seed, pretrain_cmd = item

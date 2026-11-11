@@ -12,11 +12,15 @@ def severinghaus_sao2_fraction(PaO2_mmhg: torch.Tensor, eps: float=1e-08) -> tor
 
 class PhysiologicalConstraintLoss(nn.Module):
 
-    def __init__(self, eps: float=1e-08, si_weight: float=0.0, pp_weight: float=0.0):
+    def __init__(self, eps: float=1e-08, si_weight: float=0.0, pp_weight: float=0.0,
+                 map_weight: float=1.0, hh_weight: float=1.0, spo2_weight: float=1.0):
         super().__init__()
         self.eps = eps
         self.si_weight = si_weight
         self.pp_weight = pp_weight
+        self.map_weight = map_weight
+        self.hh_weight = hh_weight
+        self.spo2_weight = spo2_weight
         self.idx = {v: i for i, v in enumerate(VARIABLES)}
 
     def _get(self, x: torch.Tensor, var: str) -> torch.Tensor:
@@ -95,7 +99,11 @@ class PhysiologicalConstraintLoss(nn.Module):
         spo2_pred_norm = torch.clamp((spo2_pred_pct - 50.0) / 50.0, 0.0, 1.0)
         losses['SpO2'] = self._mse(SpO2, spo2_pred_norm, m4)
         active['SpO2'] = m4.sum().item()
-        L_PCL = losses['MAP'] + self.pp_weight * losses['PP'] + self.si_weight * losses['SI'] + losses['HH'] + losses['SpO2']
+        L_PCL = (self.map_weight * losses['MAP'] +
+                 self.pp_weight * losses['PP'] +
+                 self.si_weight * losses['SI'] +
+                 self.hh_weight * losses['HH'] +
+                 self.spo2_weight * losses['SpO2'])
         if torch.isnan(L_PCL):
             L_PCL = torch.tensor(0.0, device=x.device, requires_grad=True)
         return {'L_PCL': L_PCL, 'losses': losses, 'active': active}

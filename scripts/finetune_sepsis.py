@@ -89,7 +89,9 @@ def main():
     model.add_classification_head(TASK)
     if args.fixed_T:
         model.cls_heads[TASK].fixed_index = args.fixed_T - 1
-    ck_root = os.environ.get("PCL_LEGACY2_CKPT_ROOT", "/tmp/pcl_ckpt")
+    import tempfile
+    default_ck_root = os.path.join(tempfile.gettempdir(), "pcl_ckpt") if os.name == "nt" else "/tmp/pcl_ckpt"
+    ck_root = os.environ.get("PCL_LEGACY2_CKPT_ROOT", default_ck_root)
     ft_path = os.path.join(ck_root, "phase2_sepsis", tag + ".pt")
     os.makedirs(os.path.dirname(ft_path), exist_ok=True)
 

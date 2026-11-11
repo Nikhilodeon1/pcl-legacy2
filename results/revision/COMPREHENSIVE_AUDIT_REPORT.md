@@ -14,11 +14,11 @@ Across five empirical investigations encompassing **230,213 ICU stays** across f
 flowchart TD
     Q["Overarching Research Question: Does Physiology-Constrained Pretraining (PCL) Improve Clinical Model Transfer?"]
     
-    P1["Pillar I: Controlled Cross-Hospital Transfer (3 Tasks, 230k Stays)<br/>• Sepsis: No benefit on MIMIC (+0.001) or eICU (-0.003); worse on Site B (Δ = -0.026, p = 0.015)<br/>• In-Domain Val: PCL is significantly worse on Site A (Δ = -0.0135, p = 0.035)<br/>• Mortality (Fixed T=48): ERM 0.720–0.736 vs. PCL 0.594–0.718 (4/12 PCL fine-tunes fail/collapse)"]
+    P1["Pillar I: Controlled Cross-Hospital Transfer (3 Tasks, 230k Stays)<br/>• Sepsis: No benefit on MIMIC (+0.001) or eICU (-0.003); worse on Site B (Δ = -0.026, p = 0.015)<br/>• In-Domain Val: PCL is significantly worse on Site A (Δ = -0.0135, p = 0.035)<br/>• Mortality (Fixed T=48): ERM 0.720–0.736 vs. PCL 0.594–0.718 (4/12 PCL fine-tunes fail or degrade below 0.65)"]
     P2["Pillar II: Evaluation Shortcut Pitfall — Variable-Window Padding Leakage<br/>• Variable-window LOS R² = +0.264 (A) / +0.229 (B) reproduced by mask+length GBM (+0.244 / +0.216)<br/>• Value permutation changes R² by 0.000; Fixed T=24 drops 0% stays and hits intrinsic R² ≈ 0.04 floor"]
     P3["Pillar III: Pretraining Confound — Gradient Steps vs. Target Exposure<br/>• Resampling Site A (10,800 steps vs. 3,870) increases Site B AUROC by +0.037 (p = 0.048)<br/>• At matched steps, substituting unlabeled target stays yields no detectable gain (Δ = -0.002, 95% CI [-0.039, +0.035])"]
     P4["Pillar IV: Representation Geometry — Centered Effective Rank & Mechanism Audit<br/>• Centered rank drops monotonically: 60.3 (ERM) → 41.3 (λ=0.5) → 34.1 (λ=2.0)<br/>• Within-condition correlation with transfer is null (ρ = -0.107, p = 0.704); pooled correlation is a cluster artifact<br/>• Linear probe retains mortality signal (0.745–0.757); collapse is driven by fine-tuning optimization instability"]
-    P5["Pillar V: Unsupervised Checkpoint Selection Under Distribution Shift<br/>• Source Validation (0.000–0.012 regret) outperforms unsupervised criteria across methods<br/>• Recon MSE tracks input corruption (0.015 regret); PCL Violation and MMD fail across λ"]
+    P5["Pillar V: Unsupervised Checkpoint Selection Under Distribution Shift<br/>• Source Validation (0.0000 regret) matches target oracle across directions<br/>• Recon MSE achieves near-oracle selection (0.0048–0.0090 regret); Distance criteria fail (0.1218–0.2271 regret)"]
 
     Q --> P1
     P1 --> P2
@@ -28,11 +28,11 @@ flowchart TD
 ```
 
 ### Supported Headline Claims
-1. **PCL does not demonstrate a transfer advantage over ERM across any evaluated hospital shift or clinical task**, underperforms ERM in-domain on the source validation cohort ($\Delta = -0.0135, p = 0.035$), underperforms ERM on near-domain transfer (`PhysioNet Site B`, $\Delta = -0.0259, p = 0.0149$), and exhibits severe fine-tuning instability on mortality ($33\%$ failure rate under fixed-observation windows).
+1. **PCL does not demonstrate a transfer advantage over ERM across any evaluated hospital shift or clinical task**, underperforms ERM in-domain on the source validation cohort ($\Delta = -0.0135, p = 0.035$), underperforms ERM on near-domain transfer (`PhysioNet Site B`, $\Delta = -0.0259, p = 0.0149$), and exhibits greater fine-tuning fragility on mortality (4 of 12 runs failing or degrading below AUROC $0.65$, vs. 0 of 6 for ERM, Fisher exact $p = 0.245$).
 2. **Apparent prior transfer gains in length-of-stay prediction were driven by post-discharge padding shortcuts rather than learned physiology**: fine-tuned Transformers under variable windows achieve $R^2 = +0.264 / +0.229$, which is reproduced by a non-neural model using only stay length and observation counts ($R^2 = +0.244 / +0.216$) and is invariant to permuting all physiological values across stays ($R^2 = +0.263 \to +0.263$).
 3. **Apparent gains from including unlabeled target-hospital data during pretraining are primarily a function of gradient optimization steps on source data**: matching optimization steps ($10,800$ vs. $3,870$) and random masking draws on source stays alone improves OOD Sepsis AUROC by $+0.0371$ ($p = 0.048$), whereas replacing resampled source stays with unlabeled target-hospital stays yields no detectable additional benefit ($\Delta_{\text{tgt}} = -0.0019$, $95\%$ CI $[-0.0393, +0.0354]$, $p = 0.892$).
 4. **Physiological regularizers reduce centered effective dimensionality (`RankMe`), but rank reduction does not explain downstream transfer variance**: while centered rank compresses monotonically from $60.34 \to 34.13$ as $\lambda$ increases, the within-condition correlation with OOD performance is near zero ($\rho = -0.107, p = 0.704$).
-5. **Unsupervised model selection criteria are inconsistent across hospital shifts**: selecting checkpoints by minimizing constraint violations or representation discrepancy exhibits high regret ($0.119 - 0.211$ AUROC) because regularized models artificially optimize these metrics. Standard source-hospital validation selection remains the most reliable strategy ($0.000 - 0.012$ regret).
+5. **Unsupervised model selection criteria are inconsistent across hospital shifts**: selecting checkpoints by minimizing constraint violations or representation discrepancy exhibits high regret ($0.0241 - 0.2271$ AUROC) because regularized models artificially optimize these metrics. Standard source-hospital validation selection remains the most reliable strategy ($0.0000$ regret, matching the oracle).
 
 ---
 
@@ -87,9 +87,9 @@ To evaluate transfer on an acuity prediction task with higher physiological sign
 | **PCL (`lam=0.5`, `eICU -> MIMIC`)** | $0.838 \pm 0.004$ | $0.808 \pm 0.005$ | $0.7600 \pm 0.0037$ | $0.7177 \pm 0.0189$ | $0.203 \pm 0.088$ | $0 / 3$ ($0\%$) | $0 / 3$ ($0\%$) |
 | **PCL (`lam=1.0`, `eICU -> MIMIC`)** | $0.835 \pm 0.005$ | $0.801 \pm 0.008$ | $0.7277 \pm 0.0549$ | $0.6881 \pm 0.0537$ | $0.228 \pm 0.045$ | $0 / 3$ ($0\%$) | $1 / 3$ (seed 42 $= 0.627$) |
 
-#### Mortality Failure Modes: Optimization Instability vs. Representation Retention
-- **Linear Probe Retention:** Evaluating a frozen linear probe on pretrained PCL representations yields an in-domain Mortality AUROC of **$0.745 - 0.757$** (vs. $0.771$ for ERM). The features retain predictive signal prior to fine-tuning.
-- **Optimization Instability During Full Fine-Tuning:** During Phase 2 unfreezing (epochs 11–30), the combination of extreme activation norms ($\|z\|_2 \approx 168$) and low centered spread ($13.8$ vs. $20.4$) destabilizes AdamW updates, causing $4$ out of $12$ PCL fine-tunes ($33.3\%$) to either collapse completely to constant predictions ($0.500$) or experience severe degradation ($< 0.65$). ERM experienced zero optimization failures across all 6 runs ($0\%$).
+#### Mortality Failure Modes: Fine-Tuning Fragility vs. Representation Linear Discriminability
+- **Linear Probe Signal Retention:** Evaluating a frozen linear probe on pretrained PCL representations yields an in-domain Mortality AUROC of **$0.745 - 0.757$** (vs. $0.771$ for ERM) and OOD AUROC of **$0.718 - 0.725$**. Pretrained representations retain substantial linear discriminative signal prior to fine-tuning.
+- **Fine-Tuning Fragility Under Standard Recipes:** Under the standard two-phase fine-tuning recipe (initial head LR $10^{-3}$, unfreezing the encoder at LR $10^{-4}$ after $1/3$ epochs), PCL exhibited higher fine-tuning fragility: across the 18 sweep checkpoints, $4$ of $12$ PCL runs ($33.3\%$) degraded or failed to learn (AUROC $< 0.65$ or $= 0.500$), compared to $0$ of $6$ for ERM ($0\%$, Fisher's exact test $p = 0.245$, not statistically significant at $\alpha = 0.05$). Notably, 3 of the 4 degradations occurred in the `MIMIC -> eICU` direction (seed 43 collapsing to $0.5000$ at $\lambda=0.5$; seed 44 reaching $0.5704$ at $\lambda=0.5$; seed 43 reaching $0.6423$ at $\lambda=1.0$), while `eICU -> MIMIC` had only 1 degraded run (seed 42 reaching $0.6265$ at $\lambda=1.0$). This pattern demonstrates that end-to-end fine-tuning on top of regularized representations can suffer optimization instability, while the representation itself retains predictive signal.
 
 ---
 
@@ -197,24 +197,24 @@ We evaluated four unsupervised selection criteria on real cross-hospital transfe
 
 | Transfer Direction & Protocol ($K=9$ Models: $\lambda \in \{0.0, 0.5, 1.0\} \times 3$ Seeds) | Selection Criterion / Decision Rule | Spearman Rank Correlation with True OOD AUROC ($\rho$) | Selected Model Checkpoint ID | Selected Model True OOD AUROC | **Selection Regret ($\text{AUROC}_{\text{oracle}} - \text{AUROC}_{\text{selected}}$)** |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **`MIMIC-IV` $\to$ `eICU-CRD` ($N=122,611$)** | **Source Validation AUROC (Standard Baseline)** | **$+0.883$** ($p = 0.0031$) | `lam0.0_p42` | $0.7271$ | **$0.0000$ (Matches Oracle)** |
+| **`MIMIC-IV` $\to$ `eICU-CRD` ($N_{\text{target}}=76,453$, total cohort $122,611$)** | **Source Validation AUROC (Standard Baseline)** | **$+0.883$** ($p = 0.0031$) | `lam0.0_p42` | $0.7271$ | **$0.0000$ (Matches Oracle)** |
 | *(Target Oracle $= 0.7271$, Worst $= 0.5000$)* | **Random Checkpoint Selection (Expected)** | $0.000$ | — | $0.6659$ | $0.0612$ |
 | | `Recon MSE` (Artificially masked target MSE) | $-0.067$ ($p = 0.865$) | `lam0.0_p43` | $0.7181$ | **$0.0090$ (Near-Oracle)** |
 | | `PCL Violation` (Masked physical residuals) | $-0.700$ ($p = 0.043$) | `lam1.0_p43` | $0.6423$ | $0.0848$ |
 | | `ReprDist` ($\|\mu_{\text{src}} - \mu_{\text{tgt}}\|_2$ in $\mathbb{R}^{256}$) | $-0.633$ ($p = 0.076$) | `lam0.5_p43` | $0.5000$ | **$0.2271$ (Selects collapsed model)** |
 | | `RBF-MMD` (Unbiased two-sample U-statistic) | $-0.533$ ($p = 0.148$) | `lam0.5_p43` | $0.5000$ | **$0.2271$ (Selects collapsed model)** |
-| **`eICU-CRD` $\to$ `MIMIC-IV` ($N=122,611$)** | **Source Validation AUROC (Standard Baseline)** | **$+0.783$** ($p = 0.0172$) | `lam0.0_p42` | $0.7483$ | **$0.0000$ (Matches Oracle)** |
+| **`eICU-CRD` $\to$ `MIMIC-IV` ($N_{\text{target}}=46,158$, total cohort $122,611$)** | **Source Validation AUROC (Standard Baseline)** | **$+0.783$** ($p = 0.0172$) | `lam0.0_p42` | $0.7483$ | **$0.0000$ (Matches Oracle)** |
 | *(Target Oracle $= 0.7483$, Worst $= 0.6265$)* | **Random Checkpoint Selection (Expected)** | $0.000$ | — | $0.7138$ | $0.0345$ |
 | | `Recon MSE` (Artificially masked target MSE) | $-0.350$ ($p = 0.359$) | `lam0.0_p44` | $0.7435$ | **$0.0048$ (Near-Oracle)** |
 | | `PCL Violation` (Masked physical residuals) | $-0.683$ ($p = 0.050$) | `lam1.0_p44` | $0.7242$ | $0.0241$ |
 | | `ReprDist` ($\|\mu_{\text{src}} - \mu_{\text{tgt}}\|_2$ in $\mathbb{R}^{256}$) | $-0.750$ ($p = 0.025$) | `lam1.0_p42` | $0.6265$ | **$0.1218$ (Selects degraded model)** |
 | | `RBF-MMD` (Unbiased two-sample U-statistic) | $-0.733$ ($p = 0.031$) | `lam1.0_p42` | $0.6265$ | **$0.1218$ (Selects degraded model)** |
 
-*(Note on Multiple Comparisons: Across the 8 hypothesis tests for unsupervised criteria, none remain statistically significant after Bonferroni-Holm correction. The negative correlations primarily indicate that criteria preferring regularized representations favor models with compressed rank and higher fine-tuning failure rates.)*
+*(Note on Multiple Comparisons and Cohort Sizes: The total evaluation cohort across both directions is $46,158 + 76,453 = 122,611$ stays. Across the 8 hypothesis tests for unsupervised criteria, none remain statistically significant after Bonferroni-Holm correction. The negative correlations primarily indicate that criteria preferring regularized representations favor models with compressed rank and higher fine-tuning failure rates.)*
 
 ### 6.2 Reference Set Clarification and Inconsistency Analysis
 - **Reference Set Distinction:** In Section 6.3 (semi-synthetic perturbation), the reference set was clean `Site B` vs. perturbed `Site B`, yielding baseline `ReprDist = 1.10` and `MMD = 0.045`. In Section 6.1 (cross-hospital transfer), the reference set was source validation (`Site A` or `MIMIC`) vs. the external target hospital (`Site B` or `eICU`), yielding `ReprDist = 6.96` and `MMD = 0.294`. The larger discrepancy in cross-hospital settings reflects demographic and institutional differences, not merely documentation frequency.
-- **Criteria Inconsistency:** Unsupervised criteria are not uniformly deficient: `Recon MSE` successfully selected near-oracle models in both directions ($0.0048 - 0.0090$ regret) and was the only criterion sensitive to synthetic input corruption (tripling from $0.506 \to 1.727$ under MAP offsets). Conversely, criteria based on representation distances (`ReprDist`, `MMD`) consistently selected models with compressed centered rank, resulting in the highest selection regret ($0.122 - 0.227$).
+- **Criteria Inconsistency:** Unsupervised criteria are not uniformly deficient: `Recon MSE` successfully selected near-oracle models in both directions ($0.0048 - 0.0090$ regret) and was the only criterion sensitive to synthetic input corruption (tripling from $0.506 \to 1.727$ under MAP offsets). Conversely, criteria based on representation distances (`ReprDist`, `MMD`) consistently selected models with compressed centered rank, resulting in the highest selection regret ($0.1218 - 0.2271$).
 
 ---
 
@@ -226,11 +226,13 @@ We evaluated four unsupervised selection criteria on real cross-hospital transfe
 - **GBM Learnability & Multi-Metric Check:** [reviewer_local_checks.json](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/reviewer_local_checks.json)
 - **Selection Criteria & Semi-Synthetic CIs:** [semisynth_and_selection_ci.json](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/semisynth_and_selection_ci.json)
 
-### 7.2 Phase 2c Colab Automation (Optional Pod Run)
-The driver script [scripts/run_phase2c_reviewer.py](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/scripts/run_phase2c_reviewer.py) and runner [colab/run_phase2c.sh](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/colab/run_phase2c.sh) have been configured to execute 5 seeds (`42–46`) across:
+### 7.2 Phase 2c Colab Automation (Pod Run)
+The driver script [scripts/run_phase2c_reviewer.py](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/scripts/run_phase2c_reviewer.py) and runner [colab/run_phase2c.sh](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/colab/run_phase2c.sh) have been configured to execute 5 seeds (`42–46`) across 5 targeted conditions:
 1. `pcl_matched_vol`: PCL $\lambda=0.5$ at 10,800 gradient steps on resampled Site A (the exact steps-matched PCL control completing the $2 \times 2$ factorial design).
 2. `scratch`: Supervised Transformer trained from random initialization without pretraining on Sepsis and LOS $T=24$.
 3. `pcl_varreg1`: PCL $\lambda=0.5$ with VICReg variance and covariance regularization (`--var-reg 1.0`).
+4. `pcl_maponly`: PCL $\lambda=0.5$ with only the algebraic MAP constraint active (HH=0, SpO2=0).
+5. `pcl_nohh`: PCL $\lambda=0.5$ with MAP and Severinghaus SpO2 active, omitting Henderson-Hasselbalch (HH=0).
 
 To execute on a GPU pod/Colab:
 ```bash
