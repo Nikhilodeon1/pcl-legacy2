@@ -38,22 +38,28 @@ def main():
     for s in args.seeds:
         # 1. VICReg Anti-Collapse Intervention (Pretrain + Sepsis FT + LOS FT)
         tag_vr = f"pcl_varreg1_p{s}"
-        jobs.append(("varreg", tag_vr, s, [
+        jobs.append(("pretrain_and_ft", tag_vr, s, [
             sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
             "--precision", "fp32", "--var-reg", "1.0", "--out-dir", args.out_dir
         ]))
-        # 2. Supervised Transformer From Scratch (No Pretrain, Sepsis FT + LOS FT)
+        # 2. Steps-Matched PCL Control (10,800 gradient steps on resampled Site A)
+        tag_pmv = f"pcl_matched_vol_p{s}"
+        jobs.append(("pretrain_and_ft", tag_pmv, s, [
+            sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
+            "--precision", "fp32", "--matched-volume-total", "25160", "--out-dir", args.out_dir
+        ]))
+        # 3. Supervised Transformer From Scratch (No Pretrain, Sepsis FT + LOS FT)
         tag_sc = f"scratch_p{s}"
         jobs.append(("scratch", tag_sc, s, None))
 
-    logging.info(f"Queued {len(jobs)} Phase 2c jobs ({len(args.seeds)} seeds x 2 conditions)")
+    logging.info(f"Queued {len(jobs)} Phase 2c jobs ({len(args.seeds)} seeds x 3 conditions)")
 
     def run_one(item):
         kind, tag, seed, pretrain_cmd = item
         log_path = os.path.join(_ROOT, "results", "revision", "logs", f"phase2c_{tag}.log")
         pt_path = "none"
 
-        if kind == "varreg":
+        if kind == "pretrain_and_ft":
             json_path = os.path.join(args.out_dir, f"{tag}.json")
             pt_path = os.path.join(args.out_dir, f"{tag}.pt")
             if os.path.exists(json_path):

@@ -18,7 +18,8 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def make_tag(lam, seed, precision, extra, warmup, no_balancer, matched_vol, var_reg=0.0):
     if matched_vol:
-        return f"erm_matched_vol_p{seed}"
+        prefix = "pcl" if lam > 0 else "erm"
+        return f"{prefix}_matched_vol_p{seed}"
     if no_balancer:
         return f"pcl_fixed_nobalance_p{seed}"
     if var_reg and var_reg > 0.0:
