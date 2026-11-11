@@ -21,9 +21,12 @@ def make_tag(lam, seed, precision, extra, warmup, no_balancer, matched_vol, var_
         return f"pcl_maponly_p{seed}"
     if constraints == "nohh":
         return f"pcl_nohh_p{seed}"
+    if constraints == "placebo":
+        return f"pcl_placebo_p{seed}"
     if matched_vol:
         prefix = "pcl" if lam > 0 else "erm"
-        return f"{prefix}_matched_vol_p{seed}"
+        suffix = "" if matched_vol == 25160 else f"_n{matched_vol}"
+        return f"{prefix}_matched_vol{suffix}_p{seed}"
     if no_balancer:
         return f"pcl_fixed_nobalance_p{seed}"
     if var_reg and var_reg > 0.0:
@@ -49,7 +52,7 @@ def main():
     ap.add_argument("--no-balancer", action="store_true", help="disable adaptive EMA balancer (fixed weight PCL)")
     ap.add_argument("--var-reg", type=float, default=0.0,
                     help="VICReg-style variance+covariance anti-collapse regularization weight")
-    ap.add_argument("--constraints", choices=["all", "map_only", "nohh"], default="all",
+    ap.add_argument("--constraints", choices=["all", "map_only", "nohh", "placebo"], default="all",
                     help="physiological constraints to apply (all, map_only, nohh)")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--cache-dir", default=os.environ.get("PCL_LEGACY2_CACHE_DIR"))
@@ -126,6 +129,8 @@ def main():
         loss_fn = PhysiologicalConstraintLoss(map_weight=1.0, hh_weight=0.0, spo2_weight=0.0)
     elif args.constraints == "nohh":
         loss_fn = PhysiologicalConstraintLoss(map_weight=1.0, hh_weight=0.0, spo2_weight=1.0)
+    elif args.constraints == "placebo":
+        loss_fn = PhysiologicalConstraintLoss(placebo_seed=1000 + args.seed)
     else:
         loss_fn = PhysiologicalConstraintLoss(map_weight=1.0, hh_weight=1.0, spo2_weight=1.0)
 

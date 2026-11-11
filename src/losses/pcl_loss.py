@@ -13,7 +13,8 @@ def severinghaus_sao2_fraction(PaO2_mmhg: torch.Tensor, eps: float=1e-08) -> tor
 class PhysiologicalConstraintLoss(nn.Module):
 
     def __init__(self, eps: float=1e-08, si_weight: float=0.0, pp_weight: float=0.0,
-                 map_weight: float=1.0, hh_weight: float=1.0, spo2_weight: float=1.0):
+                 map_weight: float=1.0, hh_weight: float=1.0, spo2_weight: float=1.0,
+                 placebo_seed=None):
         super().__init__()
         self.eps = eps
         self.si_weight = si_weight
@@ -22,6 +23,21 @@ class PhysiologicalConstraintLoss(nn.Module):
         self.hh_weight = hh_weight
         self.spo2_weight = spo2_weight
         self.idx = {v: i for i, v in enumerate(VARIABLES)}
+        if placebo_seed is not None:
+            # Placebo: identical loss forms, but each constraint variable reads a different (fixed, seeded,
+            # deranged) channel. Preserves loss structure/scale class while removing the physiological relationship.
+            import random
+            names = [v for v in ('SBP', 'DBP', 'MAP', 'SpO2', 'pH', 'HCO3', 'pCO2', 'PaO2') if v in self.idx]
+            rng = random.Random(placebo_seed)
+            while True:
+                perm = names[:]
+                rng.shuffle(perm)
+                if all(a != b for a, b in zip(names, perm)):
+                    break
+            orig = dict(self.idx)
+            self.idx = dict(orig)
+            for a, b in zip(names, perm):
+                self.idx[a] = orig[b]
 
     def _get(self, x: torch.Tensor, var: str) -> torch.Tensor:
         return x[:, :, self.idx[var]]

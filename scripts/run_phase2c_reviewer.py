@@ -71,7 +71,25 @@ def main():
             "--precision", "fp32", "--constraints", "nohh", "--out-dir", args.out_dir
         ]))
 
-    logging.info(f"Queued {len(jobs)} Phase 2c jobs ({len(args.seeds)} seeds x 5 conditions)")
+        # 6. Placebo constraint: identical loss forms on permuted (non-physiological) variable channels
+        tag_pl = f"pcl_placebo_p{s}"
+        jobs.append(("pretrain_and_ft", tag_pl, s, [
+            sys.executable, "scripts/pretrain.py", "--lam", "0.5", "--seed", str(s),
+            "--precision", "fp32", "--constraints", "placebo", "--out-dir", args.out_dir
+        ]))
+        # 7/8. Budget curve high point (80,000 stays -> ~30k steps at 30 epochs), both methods.
+        # Low point (3.9k) = sweep encoders; mid point (10.8k) = erm/pcl_matched_vol.
+        for lam, pre in ((0.0, "erm"), (0.5, "pcl")):
+            tag_b = f"{pre}_matched_vol_n80000_p{s}"
+            jobs.append(("pretrain_and_ft", tag_b, s, [
+                sys.executable, "scripts/pretrain.py", "--lam", str(lam), "--seed", str(s),
+                "--precision", "fp32", "--matched-volume-total", "80000", "--out-dir", args.out_dir
+            ]))
+
+    only = [c for c in os.environ.get("CONDITIONS", "").split() if c]
+    if only:
+        jobs = [j for j in jobs if any(j[1].startswith(c) for c in only)]
+    logging.info(f"Queued {len(jobs)} Phase 2c jobs ({len(args.seeds)} seeds)")
 
     def run_one(item):
         kind, tag, seed, pretrain_cmd = item
