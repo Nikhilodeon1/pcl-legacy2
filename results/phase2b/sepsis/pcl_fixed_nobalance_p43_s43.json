@@ -1,0 +1,42 @@
+{
+ "encoder_id": "pcl_fixed_nobalance_p43",
+ "pretrain_ckpt": "pcl_fixed_nobalance_p43.pt",
+ "seed": 43,
+ "task": "sepsis",
+ "epochs": 30,
+ "fixed_T": null,
+ "n_source": 10381,
+ "n_targets": {
+  "physionet_b": 14779
+ },
+ "in_domain": {
+  "auroc": 0.7931587269053962,
+  "auprc": 0.1830512576670164,
+  "brier": 0.12264784909000177,
+  "auroc_ci": [
+   0.733805892852488,
+   0.8450533622312194
+  ],
+  "auprc_ci": [
+   0.1076361192703548,
+   0.27751872969117025
+  ]
+ },
+ "ood": {
+  "physionet_b": {
+   "auroc": 0.6652402054358695,
+   "auprc": 0.12006536479890866,
+   "brier": 0.0341191784553153,
+   "auroc_ci": [
+    0.6302729433331732,
+    0.6994620254970275
+   ],
+   "auprc_ci": [
+    0.08722783620077953,
+    0.16488266505591453
+   ]
+  }
+ },
+ "elapsed_sec": 294.8862841129303,
+ "device": "cuda"
+}

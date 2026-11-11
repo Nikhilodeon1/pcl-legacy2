@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "pcl_fixed_nobalance_p44",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2b/pcl_fixed_nobalance_p44.pt",
+  "method": "pcl",
+  "seed": 44,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 11.095239527326143,
+    "rmse_hours": 23.20603241120271,
+    "r2": 0.049680325022640415,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.623115404672697,
+      "rmse_hours": 23.047857383097643,
+      "r2": -0.006028591508303371,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 276.6484360694885
+}

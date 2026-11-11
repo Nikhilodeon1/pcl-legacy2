@@ -29,11 +29,13 @@ TASK = "sepsis"
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pretrain-ckpt", required=True)
+    ap.add_argument("--pretrain-ckpt", default="none", help="Path to pretrained checkpoint, or 'none' for random initialization (--scratch)")
     ap.add_argument("--encoder-id", required=True)
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument("--fixed-T", type=int, default=None)
+    ap.add_argument("--scratch", action="store_true", help="Train from random initialization without loading a pretrained checkpoint")
+    ap.add_argument("--linear-probe", action="store_true", help="Keep encoder frozen for all epochs")
     ap.add_argument("--out-dir", default=os.path.join(_ROOT, "results", "phase2", "sepsis"))
     ap.add_argument("--cache-dir", default=os.environ.get("PCL_LEGACY2_CACHE_DIR"))
     ap.add_argument("--max-samples", type=int, default=None, help="smoke test")
@@ -80,7 +82,10 @@ def main():
     b_loader = DataLoader(ICUDataset(site_b), batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
 
     model = fresh_model(seed=args.seed)
-    model.load_state_dict(load_state_dict_flexible(args.pretrain_ckpt, "cpu"))
+    if not args.scratch and args.pretrain_ckpt and args.pretrain_ckpt.lower() != "none":
+        model.load_state_dict(load_state_dict_flexible(args.pretrain_ckpt, "cpu"))
+    else:
+        logging.info("[SCRATCH] Training supervised Transformer from random initialization (no pretraining)")
     model.add_classification_head(TASK)
     if args.fixed_T:
         model.cls_heads[TASK].fixed_index = args.fixed_T - 1
@@ -89,7 +94,7 @@ def main():
     os.makedirs(os.path.dirname(ft_path), exist_ok=True)
 
     t0 = time.time()
-    run_finetuning(model, train_loader, val_loader, TASK, n_epochs=n_epochs, device=device, save_path=ft_path)
+    run_finetuning(model, train_loader, val_loader, TASK, n_epochs=n_epochs, device=device, save_path=ft_path, linear_probe=args.linear_probe)
     model.load_state_dict(load_state_dict_flexible(ft_path, device))
     in_domain = evaluate_model(model, val_loader, TASK, device=device, split_name=f"{tag} in-domain (Site A val)")
     ood = {"physionet_b": evaluate_model(model, b_loader, TASK, device=device, split_name=f"{tag} zero-shot (Site B)")}

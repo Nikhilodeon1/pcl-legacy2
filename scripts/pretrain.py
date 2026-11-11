@@ -16,11 +16,13 @@ sys.path.insert(0, _HERE)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-def make_tag(lam, seed, precision, extra, warmup, no_balancer, matched_vol):
+def make_tag(lam, seed, precision, extra, warmup, no_balancer, matched_vol, var_reg=0.0):
     if matched_vol:
         return f"erm_matched_vol_p{seed}"
     if no_balancer:
         return f"pcl_fixed_nobalance_p{seed}"
+    if var_reg and var_reg > 0.0:
+        return f"pcl_varreg{var_reg:g}_p{seed}"
     t = f"lam{lam:g}_p{seed}_{precision}"
     if extra:
         t += "_leak" + "".join(w[0] + w[-1] for w in extra)
@@ -40,6 +42,8 @@ def main():
     ap.add_argument("--matched-volume-total", type=int, default=None,
                     help="resample Site A to match this exact total stay count (volume control)")
     ap.add_argument("--no-balancer", action="store_true", help="disable adaptive EMA balancer (fixed weight PCL)")
+    ap.add_argument("--var-reg", type=float, default=0.0,
+                    help="VICReg-style variance+covariance anti-collapse regularization weight")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--cache-dir", default=os.environ.get("PCL_LEGACY2_CACHE_DIR"))
     ap.add_argument("--max-samples", type=int, default=None)
@@ -50,7 +54,7 @@ def main():
         os.environ["PCL_DISABLE_AMP"] = "1"
     os.environ["PCL_TEST_MODE"] = "0"
     tag = make_tag(args.lam, args.seed, args.precision, args.extra_unlabeled, args.warmup_fraction,
-                   args.no_balancer, args.matched_volume_total)
+                   args.no_balancer, args.matched_volume_total, args.var_reg)
     os.makedirs(args.out_dir, exist_ok=True)
     out_json = os.path.join(args.out_dir, tag + ".json")
     out_pt = os.path.join(args.out_dir, tag + ".pt")
@@ -113,7 +117,7 @@ def main():
     t0 = time.time()
     history = run_pretraining(model, PhysiologicalConstraintLoss(), train_loader, val_loader, n_epochs=args.epochs, lam=args.lam,
                               mask_prob=MASK_PROB, device=device, save_path=tmp_ckpt, warmup_fraction=args.warmup_fraction,
-                              use_balancer=(not args.no_balancer))
+                              use_balancer=(not args.no_balancer), var_reg_weight=args.var_reg)
     secs = time.time() - t0
 
     model.load_state_dict(load_state_dict_flexible(tmp_ckpt, "cpu"))
@@ -126,7 +130,7 @@ def main():
         "tag": tag, "lambda": args.lam, "seed": args.seed, "precision": args.precision, "epochs": args.epochs,
         "warmup_fraction": args.warmup_fraction, "mask_prob": MASK_PROB, "batch_size": BATCH_SIZE,
         "extra_unlabeled": args.extra_unlabeled, "matched_volume_total": args.matched_volume_total,
-        "no_balancer": args.no_balancer, "n_site_a": len(site_a), "n_extra": len(extra),
+        "no_balancer": args.no_balancer, "var_reg": args.var_reg, "n_site_a": len(site_a), "n_extra": len(extra),
         "device": device, "torch": torch.__version__, "seconds": secs, "repr_diag_site_a": diag, "history": clean,
         "checkpoint": os.path.basename(out_pt),
     }, open(out_json, "w"), indent=1)

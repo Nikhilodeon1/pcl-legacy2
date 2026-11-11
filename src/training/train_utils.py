@@ -32,7 +32,21 @@ def masked_prediction_loss(preds, x_original, pretrain_mask):
     diff = (preds - x_original)[pretrain_mask]
     return (diff ** 2).mean()
 
-def pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu', scaler=None, site_adversary=None, lam_site=0.5, pcl_balancer=None):
+def vicreg_variance_covariance_loss(reps, gamma=1.0, eps=1e-4):
+    """VICReg variance hinge + covariance decorrelation on pooled token representations."""
+    z = reps[:, -1, :].float()  # (B, D) at terminal token
+    if z.shape[0] < 4:
+        return torch.tensor(0.0, device=reps.device)
+    z_cent = z - z.mean(dim=0, keepdim=True)
+    std = torch.sqrt(z_cent.var(dim=0) + eps)
+    var_loss = torch.relu(gamma - std).mean()
+    cov = (z_cent.T @ z_cent) / (z.shape[0] - 1)
+    d = z.shape[1]
+    off_diag = cov - torch.diag(torch.diag(cov))
+    cov_loss = (off_diag ** 2).sum() / d
+    return var_loss + 0.04 * cov_loss
+
+def pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu', scaler=None, site_adversary=None, lam_site=0.5, pcl_balancer=None, var_reg_weight=0.0):
     from src.models.backbone import apply_random_mask
     model.train()
     optimizer.zero_grad()
@@ -50,6 +64,8 @@ def pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=LAMBDA_PCL, mask_pro
         L_pcl = pcl_out['L_PCL']
         L_pcl_balanced = pcl_balancer.balance(L_pcl, L_masked) if pcl_balancer is not None else L_pcl
         L_total = L_masked + lam * L_pcl_balanced
+        if var_reg_weight > 0.0:
+            L_total = L_total + var_reg_weight * vicreg_variance_covariance_loss(reps)
         if torch.isnan(L_total):
             optimizer.zero_grad()
             return {k: 0.0 for k in ['L_total', 'L_masked', 'L_pcl', 'L_site', 'L_MAP', 'L_PP', 'L_SI', 'L_HH', 'L_SpO2']}
@@ -90,7 +106,7 @@ def pretrain_val_step(batch, model, pcl_loss_fn, lam=LAMBDA_PCL, mask_prob=MASK_
             L_total = L_masked.float() + lam * L_pcl
     return {'L_total': L_total.item(), 'L_masked': L_masked.item(), 'L_pcl': L_pcl.item()}
 
-def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, lr=0.0003, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu', save_path='pcl_pretrained.pt', log_every=1, warmup_fraction=0.3, use_site_adversary=False, lam_site=0.1, use_balancer=True):
+def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, lr=0.0003, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu', save_path='pcl_pretrained.pt', log_every=1, warmup_fraction=0.3, use_site_adversary=False, lam_site=0.1, use_balancer=True, var_reg_weight=0.0):
     model = model.to(device)
     site_adversary = None
     if use_site_adversary and lam > 0:
@@ -106,7 +122,7 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
     warmup_epochs = max(2, int(n_epochs * warmup_fraction))
     history = {'train_total': [], 'train_masked': [], 'train_pcl': [], 'val_total': [], 'val_masked': [], 'val_pcl': [], 'train_MAP': [], 'train_PP': [], 'train_SI': [], 'train_HH': [], 'train_SpO2': [], 'effective_lam': [], 'balance_ratio': []}
     best_val_masked = float('inf')
-    logging.info(f'Starting pretraining — {n_epochs} epochs, λ={lam} (balancer={use_balancer}, warmup over {warmup_epochs} epochs), device={device}')
+    logging.info(f'Starting pretraining — {n_epochs} epochs, λ={lam} (balancer={use_balancer}, var_reg={var_reg_weight}, warmup over {warmup_epochs} epochs), device={device}')
     logging.info(f"{'Epoch':<8} {'Train Total':<14} {'Train Masked':<14} {'Train PCL':<12} {'Val Total':<12} {'λ_eff':<10} {'LR'}")
     logging.info('─' * 85)
     for epoch in range(1, n_epochs + 1):
@@ -116,7 +132,7 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
             lam_eff = lam
         train_metrics = {'L_total': [], 'L_masked': [], 'L_pcl': [], 'L_site': [], 'L_MAP': [], 'L_PP': [], 'L_SI': [], 'L_HH': [], 'L_SpO2': []}
         for batch in train_loader:
-            step = pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=lam_eff, mask_prob=mask_prob, device=device, scaler=scaler, site_adversary=site_adversary, lam_site=lam_site, pcl_balancer=pcl_balancer)
+            step = pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=lam_eff, mask_prob=mask_prob, device=device, scaler=scaler, site_adversary=site_adversary, lam_site=lam_site, pcl_balancer=pcl_balancer, var_reg_weight=var_reg_weight)
             for k in train_metrics:
                 train_metrics[k].append(step[k])
         val_metrics = {'L_total': [], 'L_masked': [], 'L_pcl': []}

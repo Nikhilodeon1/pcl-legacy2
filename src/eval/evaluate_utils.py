@@ -44,7 +44,7 @@ def bootstrap_ci(labels, probs, metric_fn, n_bootstrap=1000, ci=0.95, seed=42):
     hi = np.percentile(scores, (1 + ci) / 2 * 100)
     return (lo, hi)
 
-def run_finetuning(model, train_loader, val_loader, task_name, n_epochs=20, lr=0.001, device='cpu', save_path=None, input_noise=0.0, mixup_alpha=0.0, weight_decay=0.0001):
+def run_finetuning(model, train_loader, val_loader, task_name, n_epochs=20, lr=0.001, device='cpu', save_path=None, input_noise=0.0, mixup_alpha=0.0, weight_decay=0.0001, linear_probe=False):
     model = model.to(device)
     if task_name not in model.cls_heads:
         model.add_classification_head(task_name)
@@ -53,7 +53,7 @@ def run_finetuning(model, train_loader, val_loader, task_name, n_epochs=20, lr=0
     best_state = copy.deepcopy(model.state_dict())
     last_state = best_state
     best_val_auroc = 0.0
-    freeze_epochs = max(1, n_epochs // 3)
+    freeze_epochs = n_epochs if linear_probe else max(1, n_epochs // 3)
     for param in model.encoder.parameters():
         param.requires_grad = False
 
@@ -205,7 +205,7 @@ def evaluate_model(model, loader, task_name, device='cpu', split_name='Val'):
     logging.info(f' [{split_name}] AUROC: {auroc:.4f}{ci_str} | AUPRC: {auprc:.4f} | Brier: {brier:.4f} | Dist: {num_pos}pos/{num_neg}neg')
     return {'auroc': auroc, 'auprc': auprc, 'brier': brier, 'auroc_ci': auroc_ci, 'auprc_ci': auprc_ci}
 
-def run_finetuning_regression(model, train_loader, val_loader, task_name, n_epochs=20, lr=0.001, device='cpu', save_path=None, weight_decay=0.0001, log_transform=True):
+def run_finetuning_regression(model, train_loader, val_loader, task_name, n_epochs=20, lr=0.001, device='cpu', save_path=None, weight_decay=0.0001, log_transform=True, linear_probe=False):
     model = model.to(device)
     if task_name not in model.cls_heads:
         model.add_classification_head(task_name)
@@ -214,7 +214,7 @@ def run_finetuning_regression(model, train_loader, val_loader, task_name, n_epoc
     best_state = copy.deepcopy(model.state_dict())
     last_state = best_state
     best_val_loss = float('inf')
-    freeze_epochs = max(1, n_epochs // 3)
+    freeze_epochs = n_epochs if linear_probe else max(1, n_epochs // 3)
     for param in model.encoder.parameters():
         param.requires_grad = False
 

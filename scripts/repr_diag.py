@@ -49,16 +49,26 @@ def diagnose(model, samples, device="cpu", hours=(23, 47), n=4000, seed=0):
     M = torch.as_tensor(np.stack([np.asarray(samples[i]["mask"]) for i in idx]), dtype=torch.bool)
     model = model.to(device)
     res = {}
+    def _erank(mat):
+        s = np.linalg.svd(mat, compute_uv=False)
+        s = s[s > 1e-12]
+        p = s / s.sum()
+        return float(np.exp(-(p * np.log(p)).sum()))
+
     for h in hours:
         r32 = _reps(model, X, M, h, device, autocast=False)
         r16 = _reps(model, X, M, h, device, autocast=True)
         mean_vec = r32.mean(axis=0)
+        rc = r32 - mean_vec[None, :]
         res[str(h)] = dict(
             n=int(len(idx)),
             mean_l2=float(np.linalg.norm(r32, axis=1).mean()),
+            centered_l2=float(np.linalg.norm(rc, axis=1).mean()),
             max_abs=float(np.abs(r32).max()),
             spread=float(r32.std(axis=0).mean() / (np.abs(mean_vec).mean() + 1e-12)),
             const_frac=float((mean_vec ** 2).sum() / ((r32 ** 2).sum(axis=1).mean() + 1e-12)),
+            erank_raw=_erank(r32),
+            erank_cent=_erank(rc),
             nonfinite_fp16=float((~np.isfinite(r16).all(axis=1)).mean()),
         )
     return res

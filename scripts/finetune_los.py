@@ -62,13 +62,15 @@ def _cached_load(name, cache_fraction, loader_fn, *args, **kwargs):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--method", choices=["erm", "pcl", "dro"], required=True)
+    ap.add_argument("--method", choices=["erm", "pcl", "dro", "scratch"], required=True)
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--fraction", type=float, default=1.0,
                      help="Subsample fraction per site, for a cheap dry run before full scale.")
     ap.add_argument("--epochs", type=int, default=None,
                      help="Override FINETUNE_EPOCHS. Small values are for plumbing checks only.")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--scratch", action="store_true", help="Train from random initialization without loading a pretrained checkpoint")
+    ap.add_argument("--linear-probe", action="store_true", help="Keep encoder frozen for all epochs")
     ap.add_argument("--pretrain-ckpt", default=None,
                      help="Explicit pretrained-encoder file (default: $PCL_LEGACY2_PRETRAIN_DIR/{method}_pretrained.pt). "
                           "Used for the lambda / pretraining-seed sweep (B2/B3).")
@@ -193,23 +195,28 @@ def main():
         target_loaders[name] = DataLoader(ICUDataset(samples), batch_size=BATCH_SIZE, shuffle=False,
                                            num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
 
-    pretrain_path = args.pretrain_ckpt or os.path.join(PRETRAIN_CKPT_DIR, f"{args.method}_pretrained.pt")
-    if not os.path.exists(pretrain_path):
-        raise FileNotFoundError(
-            f"{pretrain_path} not found — expected the prior-study pretrained checkpoint here. "
-            "Do not fall back to training a fresh encoder silently."
-        )
     model = fresh_model(seed=args.seed)
-    model.load_state_dict(load_state_dict_flexible(pretrain_path, device="cpu"))
+    if args.scratch or args.method == "scratch" or (args.pretrain_ckpt and args.pretrain_ckpt.lower() == "none"):
+        pretrain_path = "none (scratch)"
+        logging.info("[SCRATCH] Training supervised Transformer from random initialization (no pretraining)")
+    else:
+        pretrain_path = args.pretrain_ckpt or os.path.join(PRETRAIN_CKPT_DIR, f"{args.method}_pretrained.pt")
+        if not os.path.exists(pretrain_path):
+            raise FileNotFoundError(
+                f"{pretrain_path} not found — expected the prior-study pretrained checkpoint here. "
+                "Do not fall back to training a fresh encoder silently."
+            )
+        model.load_state_dict(load_state_dict_flexible(pretrain_path, device="cpu"))
+        logging.info(f"Loaded pretrained encoder: {pretrain_path}")
     model.add_classification_head(TASK)
     if args.fixed_T:
         model.cls_heads[TASK].fixed_index = args.fixed_T - 1
-    logging.info(f"Loaded pretrained encoder: {pretrain_path}")
 
     ft_ckpt_path = os.path.join(FT_CKPT_DIR, f"{tag}.pt")
     run_finetuning_regression(
         model, train_loader, val_loader, TASK,
         n_epochs=n_epochs, device=device, save_path=ft_ckpt_path,
+        linear_probe=args.linear_probe,
     )
     model.load_state_dict(load_state_dict_flexible(ft_ckpt_path, device))
 
