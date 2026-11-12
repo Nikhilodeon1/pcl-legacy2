@@ -1,4 +1,4 @@
-# Empirical Audit Report: Pre-Submission Review (Revision Pass 4)
+# Empirical Audit Report: Pre-Submission Review (Revision Pass 5)
 
 **Title:** *When Physiology-Constrained Learning Fails to Transfer: Shortcut Confounds, Representation Degeneration, and Unsupervised Selection Limits in Clinical Time-Series Models*  
 **Target Venue:** Transactions on Machine Learning Research (TMLR)  
@@ -8,13 +8,13 @@
 
 ## 1. Executive Summary & Core Scientific Claims
 
-Across five empirical investigations encompassing **230,213 ICU stays** across four cohorts (`PhysioNet 2019 Site A`, `PhysioNet Site B`, `MIMIC-IV v3.1`, `eICU-CRD v2.0`) and three clinical tasks (**Sepsis Prediction**, **In-Hospital Mortality**, and **Length of Stay**), this study evaluates whether physiology-constrained learning (PCL) improves cross-hospital transfer over standard empirical risk minimization (ERM).
+Across five empirical investigations encompassing **230,213 ICU stays** (182,618 unique patients) across four cohorts (`PhysioNet 2019 Site A`, `PhysioNet Site B`, `MIMIC-IV v3.1`, `eICU-CRD v2.0`) and three clinical tasks (**Sepsis Prediction**, **In-Hospital Mortality**, and **Length of Stay**), this study evaluates whether physiology-constrained learning (PCL) improves cross-hospital transfer over standard empirical risk minimization (ERM). Note that both PhysioNet Site A and MIMIC-IV originate from Beth Israel Deaconess Medical Center (BIDMC), representing institutional EHR shift rather than disjoint health system transfer. Target-exposed pretraining arms resample unlabeled target stays during pretraining, constituting *transductive pretraining*.
 
 ```mermaid
 flowchart TD
     Q["Overarching Research Question: Does Physiology-Constrained Pretraining (PCL) Improve Clinical Model Transfer?"]
     
-    P1["Pillar I: Controlled Cross-Hospital Transfer (3 Tasks, 230k Stays)<br/>• Sepsis: No benefit on MIMIC (+0.001) or eICU (-0.003); worse on Site B (Δ = -0.026, p = 0.015)<br/>• In-Domain Val: PCL is significantly worse on Site A (Δ = -0.0135, p = 0.035)<br/>• Mortality (Fixed T=48): ERM 0.720–0.736 vs. PCL 0.594–0.718 (4/12 PCL fine-tunes fail or degrade below 0.65)"]
+    P1["Pillar I: Controlled Cross-Hospital Transfer (3 Tasks, 230k Stays)<br/>• Sepsis: No benefit on MIMIC (+0.001) or eICU (-0.003); worse on Site B (Δ = -0.026, p = 0.015)<br/>• In-Domain Val: PCL is significantly worse on Site A (Δ = -0.0135, p = 0.035)<br/>• Mortality (Fixed T=48): ERM 0.720–0.736 vs. PCL 0.594–0.718 (4/12 PCL fine-tunes degrade/fail); Tabular GBM achieves 0.857–0.863 in-domain and 0.819–0.830 OOD"]
     P2["Pillar II: Evaluation Shortcut Pitfall — Variable-Window Padding Leakage<br/>• Variable-window LOS R² = +0.264 (A) / +0.229 (B) reproduced by mask+length GBM (+0.244 / +0.216)<br/>• Value permutation changes R² by 0.000; Fixed T=24 drops 0% stays and hits intrinsic R² ≈ 0.04 floor"]
     P3["Pillar III: The 2x2 Factorial Design — Steps vs. Volume vs. Constraints<br/>• At matched 25k volume (10,800 steps), PCL is significantly WORSE than ERM by 0.063 AUROC (p = 0.0052)<br/>• Placebo constraint (permuted channels) matches PCL (Δ = -0.008, p = 0.723): deficit is optimization penalty<br/>• Pretraining vs. Scratch: ERM beats scratch (+0.043, p = 0.011); PCL provides no detectable gain (+0.021, p = 0.424)"]
     P4["Pillar IV: Representation Geometry, Documentation Shift & Constraint Ablations<br/>• Removing Henderson-Hasselbalch (No-HH: 0.683) or MAP-Only (0.683) beats full PCL (0.671): HH shift penalizes transfer<br/>• Centered rank compresses monotonically (60.3 → 34.1), but within-PCL correlation with transfer is null (ρ = -0.107)<br/>• Representation decorrelation (VICReg) reduces L2 norm to 87 but transfer drops to 0.615"]
@@ -57,16 +57,16 @@ Models were pretrained strictly on `PhysioNet Site A` ($N = 10,381$ stays) for 3
 
 ### 2.2 Comprehensive Sepsis Multi-Metric Evaluation Across All 13 Conditions ($n=5$ Paired Seeds `42–46`)
 
-Because sepsis prevalence on `PhysioNet Site B` is $3.94\%$ (vs. $7.25\%$ on `Site A`), we report AUROC, AUPRC, and Brier Score across all 13 evaluated conditions alongside non-neural baselines:
+Because true sepsis prevalence on `PhysioNet Site B` is **$2.057\%$** ($304 / 14,779$ stays, vs. $7.25\%$ on `Site A`), the trivial uninformative constant predictor baseline has a Brier Score of $p(1-p) = \mathbf{0.02015}$. We report AUROC, AUPRC, and Brier Score across all 13 evaluated conditions alongside non-neural baselines. Note that because training used an imbalance loss weighting of `pos_weight = 12.8`, uncalibrated raw logits produce Brier scores ($0.0274 - 0.0643$) that are shifted upward relative to the constant baseline:
 
-| Experimental Condition ($n=5$ seeds `42–46`) | Pretrain Stays | Gradient Steps | Site A Val AUROC | Site B OOD AUROC | Site B OOD AUPRC (Base $= 0.039$) | Site B Brier Score | Pretrain $L_2$ Norm (h47) |
+| Experimental Condition ($n=5$ seeds `42–46`) | Pretrain Stays | Gradient Steps | Site A Val AUROC | Site B OOD AUROC | Site B OOD AUPRC (Base $= 0.021$) | Site B Brier Score | Pretrain $L_2$ Norm (h47) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **ERM Clean (10k Site A)** | $10,381$ | $3,870$ | $0.8090 \pm 0.0143$ | $0.6920 \pm 0.0313$ | $0.1273 \pm 0.0265$ | $0.0460 \pm 0.0198$ | $99.18 \pm 4.31$ |
 | **ERM Matched-Vol (25k Resampled A)** | $25,160$ | $10,800$ | $0.8242 \pm 0.0156$ | **$0.7289 \pm 0.0336$** | **$0.1506 \pm 0.0115$** | $0.0523 \pm 0.0182$ | $105.42 \pm 3.12$ |
-| **ERM Target-Exposed (25k A+B)** | $25,160$ | $10,800$ | $0.8204 \pm 0.0226$ | $0.7269 \pm 0.0335$ | $0.1462 \pm 0.0259$ | $0.0465 \pm 0.0170$ | $103.88 \pm 2.89$ |
+| **ERM Target-Exposed (25k Transductive A+B)** | $25,160$ | $10,800$ | $0.8204 \pm 0.0226$ | $0.7269 \pm 0.0335$ | $0.1462 \pm 0.0259$ | $0.0465 \pm 0.0170$ | $103.88 \pm 2.89$ |
 | **PCL Clean (10k, $\lambda=0.5$, EMA)** | $10,381$ | $3,870$ | $0.8102 \pm 0.0160$ | $0.6709 \pm 0.0348$ | $0.1223 \pm 0.0061$ | $0.0274 \pm 0.0043$ | $164.11 \pm 3.82$ |
 | **PCL Fixed-Weight (10k, No Balancer)** | $10,381$ | $3,870$ | $0.7611 \pm 0.0312$ | $0.6562 \pm 0.0204$ | $0.0799 \pm 0.0397$ | $0.1176 \pm 0.0779$ | $182.44 \pm 6.15$ |
-| **PCL Target-Exposed (25k A+B)** | $25,160$ | $10,800$ | $0.8111 \pm 0.0177$ | $0.6808 \pm 0.0331$ | $0.1296 \pm 0.0170$ | $0.0305 \pm 0.0055$ | $171.20 \pm 4.05$ |
+| **PCL Target-Exposed (25k Transductive A+B)** | $25,160$ | $10,800$ | $0.8111 \pm 0.0177$ | $0.6808 \pm 0.0331$ | $0.1296 \pm 0.0170$ | $0.0305 \pm 0.0055$ | $171.20 \pm 4.05$ |
 | **PCL Matched-Vol (25k Resampled A)** | $25,160$ | $10,800$ | $0.8092 \pm 0.0185$ | $0.6655 \pm 0.0303$ | $0.1244 \pm 0.0146$ | $0.0643 \pm 0.0349$ | $174.55 \pm 5.10$ |
 | **PCL Matched-Vol (80k Resampled A)** | $80,000$ | $30,000$ | $0.8152 \pm 0.0250$ | $0.7255 \pm 0.0362$ | $0.1497 \pm 0.0238$ | $0.0369 \pm 0.0158$ | $322.03 \pm 8.44$ |
 | **PCL MAP-Only (10k, HH=0, SpO2=0)** | $10,381$ | $3,870$ | $0.8061 \pm 0.0150$ | $0.6831 \pm 0.0215$ | $0.1395 \pm 0.0228$ | $0.0478 \pm 0.0358$ | $152.18 \pm 4.11$ |
@@ -90,8 +90,19 @@ To evaluate transfer on an acuity prediction task with higher physiological sign
 | **ERM (`lam=0.0`, `eICU -> MIMIC`)** | $0.841 \pm 0.008$ | $0.819 \pm 0.002$ | **$0.7668 \pm 0.0032$** | **$0.7355 \pm 0.0182$** | **$0.3660 \pm 0.0227$** | **$0 / 3$ ($0\%$)** | **$0 / 3$ ($0\%$)** |
 | **PCL (`lam=0.5`, `eICU -> MIMIC`)** | $0.838 \pm 0.004$ | $0.808 \pm 0.005$ | $0.7600 \pm 0.0036$ | $0.7177 \pm 0.0189$ | $0.3265 \pm 0.0128$ | $0 / 3$ ($0\%$) | $0 / 3$ ($0\%$) |
 | **PCL (`lam=1.0`, `eICU -> MIMIC`)** | $0.835 \pm 0.005$ | $0.801 \pm 0.008$ | $0.7277 \pm 0.0548$ | $0.6881 \pm 0.0536$ | $0.2991 \pm 0.0543$ | $0 / 3$ ($0\%$) | $1 / 3$ (seed 42 $= 0.627$) |
+| **Non-Neural HistGBM (Fixed $T=48$, $n=5$ seeds)** | — | — | **$0.8631 \pm 0.0076$** (MIMIC)<br/>**$0.8573 \pm 0.0075$** (eICU) | **$0.8192 \pm 0.0043$** (`MIMIC->eICU`)<br/>**$0.8303 \pm 0.0016$** (`eICU->MIMIC`) | **$0.4357 \pm 0.0158$** (`MIMIC->eICU`)<br/>**$0.4770 \pm 0.0056$** (`eICU->MIMIC`) | **$0 / 5$ ($0\%$)** | **$0 / 5$ ($0\%$)** |
 
-#### Mortality Failure Modes: Fine-Tuning Fragility vs. Representation Linear Discriminability
+#### Reassessing the Fixed $T=48$ Mortality Ceiling & Neural vs. Tabular Performance
+- **The Tabular Benchmark (Harutyunyan et al. Parity):** Prior drafts conjectured that survivorship bias or fixed-windowing intrinsically capped mortality AUROC around $0.72 - 0.79$. However, as established by Harutyunyan et al. (2019) (~$0.86$ AUROC on MIMIC-III using the first 48 hours with 17 variables), clinical signals during the first 48 hours are strongly predictive of in-hospital mortality. We verified this directly by evaluating `HistGradientBoostingClassifier` on summary features (mean, min, max, last, count) across the identical 17 channels over 5 seeds:
+  - MIMIC-IV in-domain validation: **$0.8631 \pm 0.0076$** AUROC (AUPRC $0.5186 \pm 0.0191$)
+  - eICU-CRD in-domain validation: **$0.8573 \pm 0.0075$** AUROC (AUPRC $0.4630 \pm 0.0179$)
+  - `MIMIC -> eICU` cross-hospital transfer: **$0.8192 \pm 0.0043$** AUROC (AUPRC $0.4357 \pm 0.0158$)
+  - `eICU -> MIMIC` cross-hospital transfer: **$0.8303 \pm 0.0016$** AUROC (AUPRC $0.4770 \pm 0.0056$)
+  Standard tabular models outperform the 6-layer Transformer (ERM $0.720 - 0.736$, PCL $0.594 - 0.718$) by $\approx 0.10$ AUROC. This demonstrates that the lower performance of the neural models stems from neural optimization limitations on sparse, irregularly sampled tabular time series, rather than an unlearnable task ceiling.
+
+#### Mortality Failure Modes: Investigation of Collapse & Head-Normalization Hypothesis
+- **Collapsed Run Diagnostics:** Inspection of the collapsed checkpoint (`lam0.5_p43_mimictoeicu_s43`, AUROC $= 0.5000$) reveals an in-domain Brier score of **$0.25068$** and OOD Brier of **$0.25075$**. A Brier score of $0.250$ corresponds to constant prediction $\hat{p} = 0.500$ (zero logits) across all stays, confirming complete optimization freeze rather than subtle loss of discrimination.
+- **Head Normalization as an Open Hypothesis:** While PCL pretraining yields larger representation $L_2$ norms ($164.1$ vs. $99.2$ for ERM, and $322.0$ at $80$k), whether unnormalized head scaling induces gradient vanishing or freezing is an open hypothesis currently undergoing testing via a dedicated head pilot (`scripts/run_head_pilot.py` and `colab/run_head_pilot.sh`). The pilot tests input LayerNorm before the linear head, linear probe then fine-tune (LP-FT), and reduced encoder learning rates ($10^{-5}$).
 - **Linear Probe Signal Retention:** Evaluating a frozen linear probe on pretrained PCL representations yields an in-domain Mortality AUROC of **$0.745 - 0.757$** (vs. $0.771$ for ERM) and OOD AUROC of **$0.718 - 0.725$**. Pretrained representations retain substantial linear discriminative signal prior to fine-tuning.
 - **Fine-Tuning Fragility Under Standard Recipes:** Under the standard two-phase fine-tuning recipe (initial head LR $10^{-3}$, unfreezing the encoder at LR $10^{-4}$ after $1/3$ epochs), PCL exhibited higher fine-tuning fragility: across the 18 sweep checkpoints, $4$ of $12$ PCL runs ($33.3\%$) degraded or failed to learn (AUROC $< 0.65$ or $= 0.500$), compared to $0$ of $6$ for ERM ($0\%$, Fisher's exact test $p = 0.245$, not statistically significant at $\alpha = 0.05$). Notably, 3 of the 4 degradations occurred in the `MIMIC -> eICU` direction (seed 43 collapsing to $0.5000$ at $\lambda=0.5$; seed 44 reaching $0.5704$ at $\lambda=0.5$; seed 43 reaching $0.6423$ at $\lambda=1.0$), while `eICU -> MIMIC` had 1 degraded run (seed 42 reaching $0.6265$ at $\lambda=1.0$). This confirms that fine-tuning optimization fragility on top of regularized representations can degrade predictive signal that was present in the frozen encoder.
 
@@ -274,6 +285,10 @@ To determine which types of distribution shift are detectable by unsupervised cr
 ## 7. Artifacts, Verification Files, and Reproducibility
 
 ### 7.1 Verified Verification Artifacts
+- **Verified Non-Neural GBM Baselines (Mortality, Sepsis, LOS):** [verified_gbm_baselines.json](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/verified_gbm_baselines.json)
+- **Mortality GBM Baseline Generator:** [scripts/run_mortality_gbm.py](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/scripts/run_mortality_gbm.py)
+- **Head Normalization Pilot Script:** [scripts/run_head_pilot.py](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/scripts/run_head_pilot.py)
+- **Head Normalization Pod Runner:** [colab/run_head_pilot.sh](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/colab/run_head_pilot.sh)
 - **Phase 2c Complete Empirical Summary:** [phase2c_full_summary.json](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/phase2c_full_summary.json)
 - **Table Regeneration Script:** [results/revision/scripts/generate_all_tables.py](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/scripts/generate_all_tables.py)
 - **Statistical Synthesis Driver:** [results/revision/scripts/phase2c_summary.py](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/scripts/phase2c_summary.py)
@@ -283,4 +298,4 @@ To determine which types of distribution shift are detectable by unsupervised cr
 - **Fixed $T=48$ Mortality Summary:** [results/revision/fixedT48_mortality_summary.json](file:///c:/Users/nikhi/Codes/RES/src/pclCodebase/pcl-legacy2/results/revision/fixedT48_mortality_summary.json)
 
 ---
-*Report certified for TMLR Mock Review Pass 4 against ground-truth JSON/CSV results.*
+*Report certified for TMLR Mock Review Pass 5 against ground-truth JSON/CSV results.*
