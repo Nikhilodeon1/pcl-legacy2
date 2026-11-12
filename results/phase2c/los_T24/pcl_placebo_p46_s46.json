@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "pcl_placebo_p46",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2c/pcl_placebo_p46.pt",
+  "method": "pcl",
+  "seed": 46,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 11.432857060862279,
+    "rmse_hours": 25.53541919458764,
+    "r2": 0.014740575075974593,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.636851275757518,
+      "rmse_hours": 23.170997663014575,
+      "r2": -0.01680734468199785,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 242.47642493247986
+}

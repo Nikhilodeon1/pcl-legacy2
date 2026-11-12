@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "pcl_varreg1_p44",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2c/pcl_varreg1_p44.pt",
+  "method": "pcl",
+  "seed": 44,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 11.122902659181467,
+    "rmse_hours": 23.280789256824793,
+    "r2": 0.04354766691013745,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.777991841385495,
+      "rmse_hours": 22.8795281126025,
+      "r2": 0.00861273993619538,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 241.9768590927124
+}

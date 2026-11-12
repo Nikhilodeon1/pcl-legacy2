@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "pcl_matched_vol_p42",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2c/pcl_matched_vol_p42.pt",
+  "method": "pcl",
+  "seed": 42,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 10.846231271805472,
+    "rmse_hours": 23.24200237245556,
+    "r2": 0.03285372316430568,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 12.064539288490874,
+      "rmse_hours": 24.438445270499066,
+      "r2": -0.1310878951496719,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 241.74287581443787
+}

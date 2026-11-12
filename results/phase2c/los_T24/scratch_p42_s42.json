@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "scratch_p42",
+  "pretrain_ckpt": "none",
+  "method": "scratch",
+  "seed": 42,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 10.724981508576972,
+    "rmse_hours": 23.223682797784548,
+    "r2": 0.0343777507000157,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.684408492366241,
+      "rmse_hours": 22.95923729511244,
+      "r2": 0.0016929888113935698,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 241.77403831481934
+}

@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "pcl_maponly_p44",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2c/pcl_maponly_p44.pt",
+  "method": "pcl",
+  "seed": 44,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 10.991694950840799,
+    "rmse_hours": 23.37335232490232,
+    "r2": 0.035926949174659994,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 10.683781290485156,
+      "rmse_hours": 23.15643069787335,
+      "r2": -0.015529269263999668,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 286.97484278678894
+}
