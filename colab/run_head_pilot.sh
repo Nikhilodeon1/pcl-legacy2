@@ -3,11 +3,16 @@
 # Tests LayerNorm on ClassificationHead, LP-FT, and lower encoder LR on Sepsis & Mortality.
 set -euo pipefail
 
-REPO_DIR="${REPO_DIR:-/content/pcl-legacy2}"
+REPO_DIR="${REPO_DIR:-$(pwd)}"
 PERSIST_DIR="${PERSIST_DIR:-/content/drive/MyDrive/pcl_colab}"
 CACHE_DIR="${CACHE_DIR:-/tmp/pcl_cache}"
 RESULTS_DIR="${REPO_DIR}/results/head_pilot"
-PRETRAIN_DIR="${PERSIST_DIR}/pretrained"
+
+if [ -d "${REPO_DIR}/results/revision/encoders_slim/sweep" ]; then
+    PRETRAIN_DIR="${PRETRAIN_DIR:-${REPO_DIR}/results/revision/encoders_slim/sweep}"
+else
+    PRETRAIN_DIR="${PRETRAIN_DIR:-${PERSIST_DIR}/pretrained}"
+fi
 
 cd "${REPO_DIR}"
 mkdir -p "${RESULTS_DIR}" "${CACHE_DIR}"
@@ -15,7 +20,8 @@ mkdir -p "${RESULTS_DIR}" "${CACHE_DIR}"
 echo "=== Running Head Pilot on GPU Pod ==="
 echo "[env] repo=${REPO_DIR} persist=${PERSIST_DIR} pretrain=${PRETRAIN_DIR}"
 
-SEEDS=(42 43 44 45 46)
+# Seeds 42, 43, 44 match the available sweep encoders (seed 43 is the collapsed run)
+SEEDS=(42 43 44)
 MODES=("baseline" "layernorm" "lpft")
 
 # 1. Mortality Head Pilot (Testing on lam0.5 and lam0.0)
