@@ -21,7 +21,9 @@ from torch.utils.data import DataLoader
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, _ROOT)
+os.environ["PCL_TEST_MODE"] = "0"
 
+from sklearn.metrics import roc_auc_score
 from config import BATCH_SIZE, NUM_WORKERS, PIN_MEMORY, D_MODEL, N_LAYERS
 from src.baselines import fresh_model
 from src.data.dataset import ICUDataset, make_patient_split_loaders
@@ -74,6 +76,8 @@ def run_pilot_finetuning(
     save_path=None,
 ):
     model = model.to(device)
+    for p in model.encoder.parameters():
+        p.requires_grad = False
     optimizer = torch.optim.AdamW(model.cls_heads[task_name].parameters(), lr=head_lr, weight_decay=1e-4)
 
     # Calculate class weight
@@ -88,9 +92,9 @@ def run_pilot_finetuning(
     pos_weight = torch.tensor([min(num_neg / (num_pos + 1e-6), 100.0)], device=device)
 
     encoder_unfrozen = False
-    best_val_loss = float("inf")
+    best_val_auroc = -1.0
     best_state = copy.deepcopy(model.state_dict())
-    logs = {"grad_norms": [], "val_losses": [], "train_losses": [], "nan_detected": False, "constant_collapse": False}
+    logs = {"grad_norms": [], "val_losses": [], "val_aurocs": [], "val_logit_stds": [], "train_losses": [], "nan_detected": False, "constant_collapse": False}
 
     for epoch in range(1, n_epochs + 1):
         if epoch >= unfreeze_epoch and not encoder_unfrozen:
@@ -128,7 +132,7 @@ def run_pilot_finetuning(
 
         # Validation
         model.eval()
-        val_losses, val_logits = [], []
+        val_losses, val_logits, val_labels = [], [], []
         with torch.no_grad():
             for batch in val_loader:
                 x = batch["x"].to(device, non_blocking=True)
@@ -139,24 +143,32 @@ def run_pilot_finetuning(
                 v_loss = F.binary_cross_entropy_with_logits(logits, labels)
                 val_losses.append(v_loss.item())
                 val_logits.extend(logits.cpu().numpy().tolist())
+                val_labels.extend(labels.cpu().numpy().tolist())
 
         mean_vloss = float(np.mean(val_losses))
         mean_gnorm = float(np.mean(epoch_grad_norms)) if epoch_grad_norms else 0.0
-        val_logit_std = float(np.std(val_logits)) if val_logits else 0.0
-        logs["train_losses"].append(float(np.mean(epoch_losses)))
+        val_logits_arr = np.array(val_logits)
+        val_labels_arr = np.array(val_labels)
+        val_logit_std = float(np.std(val_logits_arr)) if len(val_logits_arr) else 0.0
+        val_probs_arr = 1.0 / (1.0 + np.exp(-np.clip(val_logits_arr, -50, 50)))
+        val_auroc = float(roc_auc_score(val_labels_arr, val_probs_arr)) if len(np.unique(val_labels_arr)) >= 2 else 0.5
+
+        logs["train_losses"].append(float(np.mean(epoch_losses)) if epoch_losses else 0.0)
         logs["val_losses"].append(mean_vloss)
+        logs["val_aurocs"].append(val_auroc)
+        logs["val_logit_stds"].append(val_logit_std)
         logs["grad_norms"].append(mean_gnorm)
 
         if val_logit_std < 1e-4:
             logging.warning(f"[Epoch {epoch}] Constant logit collapse detected! std(logits)={val_logit_std:.6f}")
             logs["constant_collapse"] = True
 
-        if mean_vloss < best_val_loss:
-            best_val_loss = mean_vloss
+        if val_auroc > best_val_auroc:
+            best_val_auroc = val_auroc
             best_state = copy.deepcopy(model.state_dict())
 
         if epoch % 5 == 0 or epoch == n_epochs:
-            logging.info(f"Epoch {epoch:2d}/{n_epochs:2d}: Train Loss={np.mean(epoch_losses):.4f}, Val Loss={mean_vloss:.4f}, GradNorm={mean_gnorm:.4f}, LogitStd={val_logit_std:.4f}")
+            logging.info(f"Epoch {epoch:2d}/{n_epochs:2d}: Train Loss={logs['train_losses'][-1]:.4f}, Val Loss={mean_vloss:.4f}, Val AUROC={val_auroc:.4f}, GradNorm={mean_gnorm:.4f}, LogitStd={val_logit_std:.4f}")
 
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -171,18 +183,35 @@ def main():
     ap.add_argument("--source", choices=["mimic", "eicu", "physionet_a"], default="mimic")
     ap.add_argument("--seed", type=int, default=43, help="Seed 43 previously collapsed under PCL lam0.5")
     ap.add_argument("--pretrain-ckpt", required=True)
+    ap.add_argument("--tag", default=None, help="Optional tag to avoid overwriting outputs from different checkpoints")
     ap.add_argument("--head-mode", choices=["baseline", "layernorm", "lpft", "low_lr"], default="layernorm")
     ap.add_argument("--fixed-T", type=int, default=48)
     ap.add_argument("--fraction", type=float, default=1.0)
     ap.add_argument("--epochs", type=int, default=30)
+    ap.add_argument("--cache-dir", default=os.environ.get("PCL_LEGACY2_CACHE_DIR", "/tmp/pcl_cache"))
+    ap.add_argument("--max-samples", type=int, default=None, help="Smoke test limit per site")
+    ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()
 
+    if D_MODEL != 256 or N_LAYERS != 6:
+        raise RuntimeError(f"config resolved D_MODEL={D_MODEL}, N_LAYERS={N_LAYERS}; need 256 / 6")
+
+    ckpt_tag = args.tag or os.path.splitext(os.path.basename(args.pretrain_ckpt))[0]
+    target = "physionet_b" if (args.task == "sepsis" or args.source == "physionet_a") else ("eicu" if args.source == "mimic" else "mimic")
+    out_path = os.path.join(_ROOT, "results", "head_pilot", f"{ckpt_tag}_{args.head_mode}_{args.source}to{target}_s{args.seed}.json")
+    if os.path.exists(out_path) and not args.overwrite:
+        logging.info(f"[RESUME] {out_path} exists, skipping")
+        return
+
+    if not os.path.exists(args.pretrain_ckpt):
+        raise FileNotFoundError(f"Pretrained checkpoint not found: {args.pretrain_ckpt}")
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    logging.info(f"=== Head Pilot: Task={args.task}, Source={args.source}, Seed={args.seed}, Mode={args.head_mode} ===")
+    logging.info(f"=== Head Pilot: Task={args.task}, Source={args.source}, Seed={args.seed}, Mode={args.head_mode}, Ckpt={ckpt_tag}, Device={device} ===")
 
     # Setup head parameters based on mode
     use_layernorm = args.head_mode in ["layernorm", "lpft"]
-    unfreeze_epoch = 10 if args.head_mode == "lpft" else (10 if args.epochs == 30 else max(1, args.epochs // 3))
+    unfreeze_epoch = (10 if args.epochs == 30 else max(1, args.epochs // 3)) + 1
     encoder_lr = 1e-5 if args.head_mode in ["low_lr", "lpft"] else 1e-4
 
     # Load data
@@ -262,11 +291,19 @@ def main():
         from src.data.fixed_window import fix_window
         src_samples = fix_window(src_samples, args.fixed_T, min_los_h=args.fixed_T)
         tgt_samples = fix_window(tgt_samples, args.fixed_T, min_los_h=args.fixed_T)
+    if args.max_samples:
+        src_samples = src_samples[:args.max_samples]
+        tgt_samples = tgt_samples[:args.max_samples]
 
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
     src_ds = ICUDataset(src_samples)
     tgt_ds = ICUDataset(tgt_samples)
-    train_loader, val_loader = make_patient_split_loaders(src_ds, train_frac=0.8, batch_size=BATCH_SIZE, seed=args.seed, stratify_key=args.task)
-    tgt_loader = DataLoader(tgt_ds, batch_size=BATCH_SIZE, shuffle=False)
+    train_loader, val_loader = make_patient_split_loaders(
+        src_ds, train_frac=0.8, batch_size=BATCH_SIZE, seed=args.seed, stratify_key=args.task,
+        num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY
+    )
+    tgt_loader = DataLoader(tgt_ds, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=PIN_MEMORY)
 
     # Initialize model
     model = fresh_model(seed=args.seed)
@@ -297,6 +334,8 @@ def main():
         "source": args.source,
         "target": target,
         "seed": args.seed,
+        "tag": ckpt_tag,
+        "pretrain_ckpt": os.path.basename(args.pretrain_ckpt),
         "head_mode": args.head_mode,
         "use_layernorm": use_layernorm,
         "encoder_lr": encoder_lr,
@@ -306,12 +345,11 @@ def main():
         "logs": pilot_logs,
     }
 
-    out_path = os.path.join(_ROOT, "results", "head_pilot", f"{args.head_mode}_{args.source}to{target}_s{args.seed}.json")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as fp:
-        json.dump(out_res, fp, indent=2)
+        json.dump(out_res, fp, indent=2, default=lambda x: float(x) if hasattr(x, "item") else str(x))
     logging.info(f"Pilot completed. Saved to {out_path}")
-    print(f"RESULTS: In-domain AUROC = {in_domain.get('auroc')}, OOD AUROC = {ood.get('auroc')}")
+    print(f"RESULTS [{ckpt_tag} | {args.head_mode} | s{args.seed}]: In-domain AUROC = {in_domain.get('auroc')}, OOD AUROC = {ood.get('auroc')}")
 
 
 if __name__ == "__main__":

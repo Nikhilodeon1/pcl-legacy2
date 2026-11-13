@@ -5,7 +5,11 @@
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-$(pwd)}"
-PERSIST_DIR="${PERSIST_DIR:-/content/drive/MyDrive/pcl_colab}"
+if [ -d "/content/drive/MyDrive" ]; then
+    PERSIST_DIR="${PERSIST_DIR:-/content/drive/MyDrive/pcl_colab}"
+else
+    PERSIST_DIR="${PERSIST_DIR:-${REPO_DIR}/results/persist}"
+fi
 CACHE_DIR="${CACHE_DIR:-/tmp/pcl_cache}"
 RESULTS_DIR="${REPO_DIR}/results/sepsis_lambda_sweep"
 PRETRAIN_DIR="${REPO_DIR}/results/pretrain_lambda_sweep"
@@ -13,8 +17,13 @@ PRETRAIN_DIR="${REPO_DIR}/results/pretrain_lambda_sweep"
 cd "${REPO_DIR}"
 mkdir -p "${RESULTS_DIR}" "${PRETRAIN_DIR}" "${CACHE_DIR}"
 
-echo "=== Running Sepsis Lambda Sweep on GPU Pod ==="
+export PCL_TEST_MODE=0
+export NUM_WORKERS="${NUM_WORKERS:-0}"
+export PCL_LEGACY2_CACHE_DIR="${CACHE_DIR}"
+
+echo "=== Running Sepsis Lambda Sweep ==="
 echo "[env] repo=${REPO_DIR} cache=${CACHE_DIR} results=${RESULTS_DIR}"
+python -c "import torch; print(f'[torch] version={torch.__version__}, cuda_available={torch.cuda.is_available()}, device_count={torch.cuda.device_count()}')"
 
 # Unpack bundled PhysioNet cache if not present
 if [ ! -s "${CACHE_DIR}/physionet_frac1.0.pkl" ]; then
@@ -24,9 +33,8 @@ if [ ! -s "${CACHE_DIR}/physionet_frac1.0.pkl" ]; then
         echo "Unpacked ${CACHE_DIR}/physionet_frac1.0.pkl ($(( $(stat -c%s "${CACHE_DIR}/physionet_frac1.0.pkl") / 1048576 )) MB)"
     fi
 fi
-export PCL_LEGACY2_CACHE_DIR="${CACHE_DIR}"
 
-LAMBDAS=(0.0 0.01 0.05 0.1 0.5 1.0)
+LAMBDAS=(0 0.01 0.05 0.1 0.5 1)
 SEEDS=(42 43 44)
 
 for lam in "${LAMBDAS[@]}"; do
@@ -67,8 +75,8 @@ for lam in "${LAMBDAS[@]}"; do
     done
 done
 
-# Sync results to Google Drive if mounted
-if [ -d "${PERSIST_DIR}" ]; then
+# Sync results to Google Drive only if mounted
+if [ -d "/content/drive/MyDrive" ]; then
     mkdir -p "${PERSIST_DIR}/sepsis_lambda_sweep"
     cp -ru "${RESULTS_DIR}"/* "${PERSIST_DIR}/sepsis_lambda_sweep/" || true
     echo "Synced results to ${PERSIST_DIR}/sepsis_lambda_sweep"
