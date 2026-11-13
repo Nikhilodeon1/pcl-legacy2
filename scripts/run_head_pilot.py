@@ -9,6 +9,7 @@ import copy
 import json
 import logging
 import os
+import pickle
 import sys
 import time
 import numpy as np
@@ -185,10 +186,77 @@ def main():
     encoder_lr = 1e-5 if args.head_mode in ["low_lr", "lpft"] else 1e-4
 
     # Load data
-    target = "eicu" if args.source == "mimic" else ("mimic" if args.source == "eicu" else "physionet_b")
-    from scripts.finetune_mortality import _load_site
-    src_samples = _load_site(args.source, args.fraction, args.seed)
-    tgt_samples = _load_site(target, args.fraction, args.seed)
+    if args.task == "sepsis" or args.source == "physionet_a":
+        target = "physionet_b"
+        cache_candidates = [
+            os.path.join(args.cache_dir or "", "physionet_frac1.0.pkl"),
+            "/tmp/pcl_cache/physionet_frac1.0.pkl",
+            os.path.join(_ROOT, "results", "revision", "cache", "physionet_frac1.0.pkl"),
+            os.path.join(_ROOT, "colab", "physionet_frac1.0.pkl"),
+        ]
+        cache_path = None
+        for c in cache_candidates:
+            if os.path.exists(c) and os.path.getsize(c) > 10000000:
+                cache_path = c
+                break
+
+        if cache_path is None:
+            # Look for bundled gz archive
+            gz_candidates = [
+                os.path.join(_ROOT, "colab", "physionet_frac1.0.pkl.gz"),
+                os.path.join(_ROOT, "results", "revision", "cache_gz", "physionet_frac1.0.pkl.gz"),
+            ]
+            for gz in gz_candidates:
+                if os.path.exists(gz):
+                    import gzip, shutil
+                    dest = "/tmp/pcl_cache/physionet_frac1.0.pkl"
+                    os.makedirs(os.path.dirname(dest), exist_ok=True)
+                    logging.info(f"Unpacking bundled PhysioNet cache from {gz} -> {dest}...")
+                    with gzip.open(gz, "rb") as f_in, open(dest, "wb") as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                    cache_path = dest
+                    break
+
+        if cache_path is None or not os.path.exists(cache_path):
+            raise FileNotFoundError("Could not find physionet_frac1.0.pkl or physionet_frac1.0.pkl.gz")
+
+        logging.info(f"[PhysioNet] Loading cache from {cache_path}")
+        with open(cache_path, "rb") as fp:
+            pn = pickle.load(fp)
+        src_samples = [s for s in pn if s["site_id"] == 0]
+        tgt_samples = [s for s in pn if s["site_id"] == 1]
+    else:
+        target = "eicu" if args.source == "mimic" else "mimic"
+        def _get_mortality_site(site):
+            candidates = [
+                os.path.join(_ROOT, "results", "revision", "cache", f"{site}_frac1.0_s42.pkl"),
+                os.path.join(_ROOT, "results", "revision", "cache", f"{site}_frac1.0.pkl"),
+                os.path.join(args.cache_dir or "/tmp/pcl_cache", f"{site}_frac1.0.pkl"),
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    logging.info(f"[CACHE] Loading {site} from {c}")
+                    with open(c, "rb") as fp:
+                        return pickle.load(fp)
+            gz_c = os.path.join(_ROOT, "results", "revision", "cache_gz", f"{site}_frac1.0.pkl.gz")
+            if os.path.exists(gz_c):
+                import gzip
+                logging.info(f"[CACHE_GZ] Loading {site} from {gz_c}")
+                with gzip.open(gz_c, "rb") as fp:
+                    return pickle.load(fp)
+            try:
+                from scripts.finetune_mortality import _load_site
+                return _load_site(site, args.fraction, args.seed)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Could not load {site} data: {e}.\n"
+                    f"Notice: MIMIC-IV and eICU-CRD are credentialed datasets under PhysioNet DUA.\n"
+                    f"Remote GPU pods enforce PCL_PHYSIONET_ONLY=1. To test on the pod, run on Sepsis:\n"
+                    f"  python scripts/run_head_pilot.py --task sepsis --source physionet_a ..."
+                ) from e
+
+        src_samples = _get_mortality_site(args.source)
+        tgt_samples = _get_mortality_site(target)
 
     if args.fixed_T:
         from src.data.fixed_window import fix_window

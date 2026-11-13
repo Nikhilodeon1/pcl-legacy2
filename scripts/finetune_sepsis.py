@@ -63,7 +63,25 @@ def main():
         raise RuntimeError("config is in TEST_MODE; need 256 / 6")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     n_epochs = args.epochs or FINETUNE_EPOCHS
-    pn = pickle.load(open(os.path.join(args.cache_dir, "physionet_frac1.0.pkl"), "rb"))
+    cache_file = os.path.join(args.cache_dir or "/tmp/pcl_cache", "physionet_frac1.0.pkl")
+    if not os.path.exists(cache_file):
+        for alt in [
+            os.path.join(_ROOT, "results", "revision", "cache", "physionet_frac1.0.pkl"),
+            "/tmp/pcl_cache/physionet_frac1.0.pkl",
+        ]:
+            if os.path.exists(alt):
+                cache_file = alt
+                break
+    if not os.path.exists(cache_file):
+        gz = os.path.join(_ROOT, "colab", "physionet_frac1.0.pkl.gz")
+        if os.path.exists(gz):
+            import gzip, shutil
+            dest = "/tmp/pcl_cache/physionet_frac1.0.pkl"
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with gzip.open(gz, "rb") as fin, open(dest, "wb") as fout:
+                shutil.copyfileobj(fin, fout)
+            cache_file = dest
+    pn = pickle.load(open(cache_file, "rb"))
     site_a = [s for s in pn if s["site_id"] == 0]
     site_b = [s for s in pn if s["site_id"] == 1]
     if args.fixed_T:
