@@ -40,13 +40,15 @@ def paired_stats(diffs):
 
 def find_json(patterns):
     for p in patterns:
-        matches = glob.glob(p)
+        p_abs = p if os.path.isabs(p) else os.path.join(_ROOT, p)
+        matches = glob.glob(p_abs)
         if matches:
             return matches[0]
     return None
 
 
-def load_all_conditions():
+def load_all_conditions(seeds=None):
+    seeds = SEEDS if seeds is None else seeds
     conditions = {
         "ERM Clean (10k)": {
             "sepsis": lambda s: [f"results/phase2/sepsis/lam0_p{s}_fp32_s{s}.json"],
@@ -136,7 +138,7 @@ def load_all_conditions():
     data = {}
     for cname, loaders in conditions.items():
         data[cname] = {}
-        for s in SEEDS:
+        for s in seeds:
             # Sepsis
             sep_f = find_json(loaders["sepsis"](s))
             sep_d = json.load(open(sep_f)) if sep_f and os.path.exists(sep_f) else {}

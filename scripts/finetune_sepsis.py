@@ -117,7 +117,12 @@ def main():
     run_finetuning(model, train_loader, val_loader, TASK, n_epochs=n_epochs, device=device, save_path=ft_path, linear_probe=args.linear_probe)
     model.load_state_dict(load_state_dict_flexible(ft_path, device))
     in_domain = evaluate_model(model, val_loader, TASK, device=device, split_name=f"{tag} in-domain (Site A val)")
-    ood = {"physionet_b": evaluate_model(model, b_loader, TASK, device=device, split_name=f"{tag} zero-shot (Site B)")}
+    ood_b, b_probs, b_labels = evaluate_model(model, b_loader, TASK, device=device, split_name=f"{tag} zero-shot (Site B)", return_preds=True)
+    ood = {"physionet_b": ood_b}
+    pred_dir = os.path.join(args.out_dir, "preds")
+    os.makedirs(pred_dir, exist_ok=True)
+    b_pids = np.asarray([s.get("pid", s.get("stay_id", idx)) for idx, s in enumerate(site_b)], dtype=object)
+    np.savez(os.path.join(pred_dir, f"{tag}_site_b.npz"), probs=b_probs, labels=b_labels, pids=b_pids)
     json.dump({"encoder_id": args.encoder_id, "pretrain_ckpt": os.path.basename(args.pretrain_ckpt), "seed": args.seed, "task": TASK, "epochs": n_epochs,
                "fixed_T": args.fixed_T, "n_source": len(site_a), "n_targets": {"physionet_b": len(site_b)},
                "in_domain": in_domain, "ood": ood, "elapsed_sec": time.time() - t0, "device": device}, open(out_path, "w"), indent=1, default=str)

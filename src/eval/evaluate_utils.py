@@ -172,7 +172,7 @@ def run_finetuning(model, train_loader, val_loader, task_name, n_epochs=20, lr=0
         logging.info(f'Best model saved to: {save_path}')
     return history
 
-def evaluate_model(model, loader, task_name, device='cpu', split_name='Val'):
+def evaluate_model(model, loader, task_name, device='cpu', split_name='Val', return_preds=False):
     model.eval()
     all_probs, all_labels = ([], [])
     with torch.no_grad():
@@ -193,7 +193,8 @@ def evaluate_model(model, loader, task_name, device='cpu', split_name='Val'):
     num_neg = len(all_labels) - num_pos
     if len(np.unique(all_labels)) < 2:
         logging.info(f' [{split_name}] Warning: Only one class present (Pos:{num_pos}, Neg:{num_neg}) — cannot compute AUROC')
-        return {'auroc': None, 'auprc': None, 'brier': None, 'auroc_ci': (None, None), 'auprc_ci': (None, None)}
+        res = {'auroc': None, 'auprc': None, 'brier': None, 'auroc_ci': (None, None), 'auprc_ci': (None, None)}
+        return (res, all_probs, all_labels) if return_preds else res
     auroc = roc_auc_score(all_labels, all_probs)
     auprc = average_precision_score(all_labels, all_probs)
     brier = brier_score_loss(all_labels, all_probs)
@@ -203,7 +204,8 @@ def evaluate_model(model, loader, task_name, device='cpu', split_name='Val'):
     if auroc_ci[0] is not None:
         ci_str = f' [CI: {auroc_ci[0]:.3f}-{auroc_ci[1]:.3f}]'
     logging.info(f' [{split_name}] AUROC: {auroc:.4f}{ci_str} | AUPRC: {auprc:.4f} | Brier: {brier:.4f} | Dist: {num_pos}pos/{num_neg}neg')
-    return {'auroc': auroc, 'auprc': auprc, 'brier': brier, 'auroc_ci': auroc_ci, 'auprc_ci': auprc_ci}
+    res = {'auroc': auroc, 'auprc': auprc, 'brier': brier, 'auroc_ci': auroc_ci, 'auprc_ci': auprc_ci}
+    return (res, all_probs, all_labels) if return_preds else res
 
 def run_finetuning_regression(model, train_loader, val_loader, task_name, n_epochs=20, lr=0.001, device='cpu', save_path=None, weight_decay=0.0001, log_transform=True, linear_probe=False):
     model = model.to(device)

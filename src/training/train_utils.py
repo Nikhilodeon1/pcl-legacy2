@@ -63,12 +63,16 @@ def pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=LAMBDA_PCL, mask_pro
         pcl_out = pcl_loss_fn(preds.float(), c_mask, pretrain_mask=pretrain_mask)
         L_pcl = pcl_out['L_PCL']
         L_pcl_balanced = pcl_balancer.balance(L_pcl, L_masked) if pcl_balancer is not None else L_pcl
-        L_total = L_masked + lam * L_pcl_balanced
+        L_pcl_weighted = lam * L_pcl_balanced
+        L_total = L_masked + L_pcl_weighted
         if var_reg_weight > 0.0:
             L_total = L_total + var_reg_weight * vicreg_variance_covariance_loss(reps)
         if torch.isnan(L_total):
             optimizer.zero_grad()
-            return {k: 0.0 for k in ['L_total', 'L_masked', 'L_pcl', 'L_site', 'L_MAP', 'L_PP', 'L_SI', 'L_HH', 'L_SpO2']}
+            return {k: 0.0 for k in [
+                'L_total', 'L_masked', 'L_pcl', 'L_pcl_weighted', 'pcl_loss_share',
+                'grad_norm', 'L_site', 'L_MAP', 'L_PP', 'L_SI', 'L_HH', 'L_SpO2'
+            ]}
         L_site_val = 0.0
         if site_adversary is not None and 'site_id' in batch:
             site_labels = batch['site_id'].to(device, non_blocking=True).long()
@@ -79,14 +83,30 @@ def pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=LAMBDA_PCL, mask_pro
     if scaler is not None:
         scaler.scale(L_total).backward()
         scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        grad_norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0))
         scaler.step(optimizer)
         scaler.update()
     else:
         L_total.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        grad_norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0))
         optimizer.step()
-    return {'L_total': L_total.item(), 'L_masked': L_masked.item(), 'L_pcl': L_pcl.item(), 'L_site': L_site_val, 'L_MAP': pcl_out['losses']['MAP'].item(), 'L_PP': pcl_out['losses']['PP'].item(), 'L_SI': pcl_out['losses']['SI'].item(), 'L_HH': pcl_out['losses']['HH'].item(), 'L_SpO2': pcl_out['losses']['SpO2'].item()}
+    L_total_val = float(L_total.item())
+    L_pcl_weighted_val = float(L_pcl_weighted.item())
+    pcl_loss_share = (L_pcl_weighted_val / L_total_val) if L_total_val > 1e-12 else 0.0
+    return {
+        'L_total': L_total_val,
+        'L_masked': float(L_masked.item()),
+        'L_pcl': float(L_pcl.item()),
+        'L_pcl_weighted': L_pcl_weighted_val,
+        'pcl_loss_share': pcl_loss_share,
+        'grad_norm': grad_norm,
+        'L_site': L_site_val,
+        'L_MAP': float(pcl_out['losses']['MAP'].item()),
+        'L_PP': float(pcl_out['losses']['PP'].item()),
+        'L_SI': float(pcl_out['losses']['SI'].item()),
+        'L_HH': float(pcl_out['losses']['HH'].item()),
+        'L_SpO2': float(pcl_out['losses']['SpO2'].item()),
+    }
 
 def pretrain_val_step(batch, model, pcl_loss_fn, lam=LAMBDA_PCL, mask_prob=MASK_PROB, device='cpu'):
     from src.models.backbone import apply_random_mask
@@ -120,7 +140,14 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs, eta_min=lr * 0.1)
     pcl_balancer = PCLLossBalancer(target_ratio=1.0) if use_balancer else None
     warmup_epochs = max(2, int(n_epochs * warmup_fraction))
-    history = {'train_total': [], 'train_masked': [], 'train_pcl': [], 'val_total': [], 'val_masked': [], 'val_pcl': [], 'train_MAP': [], 'train_PP': [], 'train_SI': [], 'train_HH': [], 'train_SpO2': [], 'effective_lam': [], 'balance_ratio': []}
+    history = {
+        'train_total': [], 'train_masked': [], 'train_pcl': [],
+        'train_pcl_weighted': [], 'train_pcl_loss_share': [],
+        'train_grad_norm': [], 'train_grad_norm_max': [], 'train_grad_clip_frac': [],
+        'val_total': [], 'val_masked': [], 'val_pcl': [],
+        'train_MAP': [], 'train_PP': [], 'train_SI': [], 'train_HH': [], 'train_SpO2': [],
+        'effective_lam': [], 'balance_ratio': [],
+    }
     best_val_masked = float('inf')
     logging.info(f'Starting pretraining — {n_epochs} epochs, λ={lam} (balancer={use_balancer}, var_reg={var_reg_weight}, warmup over {warmup_epochs} epochs), device={device}')
     logging.info(f"{'Epoch':<8} {'Train Total':<14} {'Train Masked':<14} {'Train PCL':<12} {'Val Total':<12} {'λ_eff':<10} {'LR'}")
@@ -130,7 +157,10 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
             lam_eff = lam * (epoch / warmup_epochs)
         else:
             lam_eff = lam
-        train_metrics = {'L_total': [], 'L_masked': [], 'L_pcl': [], 'L_site': [], 'L_MAP': [], 'L_PP': [], 'L_SI': [], 'L_HH': [], 'L_SpO2': []}
+        train_metrics = {
+            'L_total': [], 'L_masked': [], 'L_pcl': [], 'L_pcl_weighted': [], 'pcl_loss_share': [],
+            'grad_norm': [], 'L_site': [], 'L_MAP': [], 'L_PP': [], 'L_SI': [], 'L_HH': [], 'L_SpO2': [],
+        }
         for batch in train_loader:
             step = pretrain_step(batch, model, pcl_loss_fn, optimizer, lam=lam_eff, mask_prob=mask_prob, device=device, scaler=scaler, site_adversary=site_adversary, lam_site=lam_site, pcl_balancer=pcl_balancer, var_reg_weight=var_reg_weight)
             for k in train_metrics:
@@ -144,6 +174,12 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
         t_total = np.mean(train_metrics['L_total']) if train_metrics['L_total'] else np.nan
         t_masked = np.mean(train_metrics['L_masked']) if train_metrics['L_masked'] else np.nan
         t_pcl = np.mean(train_metrics['L_pcl']) if train_metrics['L_pcl'] else np.nan
+        t_pcl_w = np.mean(train_metrics['L_pcl_weighted']) if train_metrics['L_pcl_weighted'] else np.nan
+        t_pcl_share = np.mean(train_metrics['pcl_loss_share']) if train_metrics['pcl_loss_share'] else np.nan
+        g_norms = [g for g in train_metrics['grad_norm'] if not np.isnan(g)]
+        t_gnorm = np.mean(g_norms) if g_norms else np.nan
+        t_gnorm_max = np.max(g_norms) if g_norms else np.nan
+        t_gclip_frac = np.mean([1.0 if g > 1.0 else 0.0 for g in g_norms]) if g_norms else np.nan
         v_total = np.mean(val_metrics['L_total']) if val_metrics['L_total'] else np.nan
         v_masked = np.mean(val_metrics['L_masked']) if val_metrics['L_masked'] else np.nan
         v_pcl = np.mean(val_metrics['L_pcl']) if val_metrics['L_pcl'] else np.nan
@@ -153,6 +189,11 @@ def run_pretraining(model, pcl_loss_fn, train_loader, val_loader, n_epochs=20, l
         history['train_total'].append(t_total)
         history['train_masked'].append(t_masked)
         history['train_pcl'].append(t_pcl)
+        history['train_pcl_weighted'].append(t_pcl_w)
+        history['train_pcl_loss_share'].append(t_pcl_share)
+        history['train_grad_norm'].append(t_gnorm)
+        history['train_grad_norm_max'].append(t_gnorm_max)
+        history['train_grad_clip_frac'].append(t_gclip_frac)
         history['val_total'].append(v_total)
         history['val_masked'].append(v_masked)
         history['val_pcl'].append(v_pcl)
