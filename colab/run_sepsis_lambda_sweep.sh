@@ -42,7 +42,7 @@ for lam in "${LAMBDAS[@]}"; do
         tag="lam${lam}_p${seed}_fp32"
         ckpt="${PRETRAIN_DIR}/${tag}.pt"
         pretrain_json="${PRETRAIN_DIR}/${tag}.json"
-        ft_json="${RESULTS_DIR}/${tag}_s${seed}_T24.json"
+        ft_json="${RESULTS_DIR}/${tag}_s${seed}.json"
 
         # 1. Pretrain on Site A
         if [ ! -f "${ckpt}" ]; then
@@ -58,14 +58,13 @@ for lam in "${LAMBDAS[@]}"; do
             echo "[skip] Pretrain checkpoint exists: ${ckpt}"
         fi
 
-        # 2. Fine-tune on Sepsis (Site A -> Site B)
+        # 2. Fine-tune on Sepsis (Site A -> Site B, matching Phase 2/2b/2c full-window protocol)
         if [ ! -f "${ft_json}" ]; then
             echo "=== [Fine-tune Sepsis] Lambda: ${lam} | Seed: ${seed} ==="
             python scripts/finetune_sepsis.py \
                 --pretrain-ckpt "${ckpt}" \
                 --encoder-id "${tag}" \
                 --seed "${seed}" \
-                --fixed-T 24 \
                 --epochs 30 \
                 --out-dir "${RESULTS_DIR}" \
                 --cache-dir "${CACHE_DIR}"
