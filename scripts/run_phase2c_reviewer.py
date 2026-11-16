@@ -96,6 +96,15 @@ def main():
         log_path = os.path.join(_ROOT, "results", "revision", "logs", f"phase2c_{tag}.log")
         pt_path = "none"
 
+        sep_out = os.path.join(_ROOT, "results", "phase2c", "sepsis")
+        sep_json = os.path.join(sep_out, f"{tag}_s{seed}.json")
+        los_out = os.path.join(_ROOT, "results", "phase2c", "los_T24")
+        los_json = os.path.join(los_out, f"{tag}_s{seed}.json")
+        pt_dest_json = os.path.join(_ROOT, "results", "phase2c", "pretrain", f"{tag}.json")
+        if os.path.exists(sep_json) and os.path.exists(los_json) and (kind == "scratch" or os.path.exists(pt_dest_json)):
+            logging.info(f"[RESUME] {tag} all downstream outputs exist, skipping.")
+            return tag, True
+
         if kind == "pretrain_and_ft":
             json_path = os.path.join(args.out_dir, f"{tag}.json")
             pt_path = os.path.join(args.out_dir, f"{tag}.pt")

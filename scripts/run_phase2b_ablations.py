@@ -62,6 +62,15 @@ def main():
         pt_path = os.path.join(args.out_dir, f"{tag}.pt")
         log_path = os.path.join(_ROOT, "results", "revision", "logs", f"phase2b_{tag}.log")
 
+        dest_json = os.path.join(_ROOT, "results", "phase2b", "pretrain", f"{tag}.json")
+        sep_out = os.path.join(_ROOT, "results", "phase2b", "sepsis")
+        sep_json = os.path.join(sep_out, f"{tag}_s{seed}.json")
+        los_out = os.path.join(_ROOT, "results", "phase2b", "los_T24")
+        los_json = os.path.join(los_out, f"{tag}_s{seed}.json")
+        if os.path.exists(dest_json) and os.path.exists(sep_json) and os.path.exists(los_json):
+            logging.info(f"[RESUME] {tag} all downstream outputs exist, skipping.")
+            return tag, True
+
         if os.path.exists(json_path):
             logging.info(f"[RESUME] {tag} already pretrained, skipping.")
         else:
