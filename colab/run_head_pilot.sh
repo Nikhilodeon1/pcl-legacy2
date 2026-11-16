@@ -24,6 +24,11 @@ fi
 cd "${REPO_DIR}"
 mkdir -p "${RESULTS_DIR}" "${CACHE_DIR}" "${PRETRAIN_DIR}"
 
+# Restore previously finished head pilot outputs from Drive if present
+if [ -d "${PERSIST_DIR}/head_pilot" ]; then
+    cp -ru "${PERSIST_DIR}/head_pilot/"* "${RESULTS_DIR}/" 2>/dev/null || true
+fi
+
 export PCL_TEST_MODE=0
 export NUM_WORKERS="${NUM_WORKERS:-0}"
 export PCL_LEGACY2_CACHE_DIR="${CACHE_DIR}"
@@ -115,6 +120,10 @@ for seed in "${SEEDS[@]}"; do
             --fixed-T 24 \
             --epochs 30
     done
+    if [ -d "/content/drive/MyDrive" ]; then
+        mkdir -p "${PERSIST_DIR}/head_pilot"
+        cp -rf "${RESULTS_DIR}/"* "${PERSIST_DIR}/head_pilot/" 2>/dev/null || true
+    fi
 done
 
 # 2. Mortality Head Pilot (only if MIMIC data / cache is present)

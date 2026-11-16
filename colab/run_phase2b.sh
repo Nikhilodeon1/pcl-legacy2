@@ -14,6 +14,7 @@ SEEDS="${SEEDS:-42 43 44 45 46}"
 export NUM_WORKERS="${NUM_WORKERS:-0}"
 P2B_DIR="$PCL_LEGACY2_PRETRAIN_DIR/phase2b"
 mkdir -p "$P2B_DIR" results/phase2b/pretrain results/phase2b/sepsis results/phase2b/los_T24 results/revision/logs "$PCL_COLAB_PERSIST/results_phase2b"
+cp -rn "$PCL_COLAB_PERSIST/results_phase2b/"* results/phase2b/ 2>/dev/null || true
 
 echo "=== Running Phase 2b Targeted Ablations (JOBS=$JOBS) ==="
 python3 scripts/run_phase2b_ablations.py --jobs "$JOBS" --seeds $SEEDS --out-dir "$P2B_DIR"

@@ -25,11 +25,22 @@ if grep -rq '"n_site_a": 233' "$PCL_COLAB_PERSIST" "$PCL_REPO/results/phase2" 2>
 fi
 
 # Restore valid results from persistent storage if present
-if [ -d "$PCL_COLAB_PERSIST/results_phase2" ]; then
-  echo "=== Restoring previous results/phase2 from $PCL_COLAB_PERSIST/results_phase2 ==="
-  mkdir -p "$PCL_REPO/results/phase2"
-  cp -rn "$PCL_COLAB_PERSIST/results_phase2/"* "$PCL_REPO/results/phase2/" 2>/dev/null || true
-fi
+for pair in \
+  "results_phase2:results/phase2" \
+  "results_phase2b:results/phase2b" \
+  "results_phase2c:results/phase2c" \
+  "head_pilot:results/head_pilot" \
+  "pretrain_lambda_sweep:results/pretrain_lambda_sweep" \
+  "sepsis_lambda_sweep:results/sepsis_lambda_sweep"; do
+  src_name="${pair%%:*}"
+  dst_rel="${pair#*:}"
+  if [ -d "$PCL_COLAB_PERSIST/$src_name" ]; then
+    echo "=== Restoring previous $dst_rel from $PCL_COLAB_PERSIST/$src_name ==="
+    mkdir -p "$PCL_REPO/$dst_rel"
+    cp -r --update=none "$PCL_COLAB_PERSIST/$src_name/"* "$PCL_REPO/$dst_rel/" 2>/dev/null || \
+      cp -rn "$PCL_COLAB_PERSIST/$src_name/"* "$PCL_REPO/$dst_rel/" 2>/dev/null || true
+  fi
+done
 
 echo "=== 2. PhysioNet 2019 cache setup ==="
 CACHE_PKL="$PCL_LEGACY2_CACHE_DIR/physionet_frac1.0.pkl"

@@ -162,6 +162,20 @@ def main():
             with open(log_path, "a") as lf:
                 subprocess.run(cmd_los, env=env, stdout=lf, stderr=subprocess.STDOUT)
 
+        persist = os.environ.get("PCL_COLAB_PERSIST")
+        if persist and os.path.isdir(persist):
+            p_base = os.path.join(persist, "results_phase2c")
+            for src_f, rel_dst in [
+                (pt_dest_json, os.path.join("pretrain", f"{tag}.json")),
+                (sep_json, os.path.join("sepsis", f"{tag}_s{seed}.json")),
+                (os.path.join(sep_out, "preds", f"{tag}_s{seed}_site_b.npz"), os.path.join("sepsis", "preds", f"{tag}_s{seed}_site_b.npz")),
+                (los_json, os.path.join("los_T24", f"{tag}_s{seed}.json")),
+            ]:
+                if os.path.exists(src_f):
+                    dst_f = os.path.join(p_base, rel_dst)
+                    os.makedirs(os.path.dirname(dst_f), exist_ok=True)
+                    shutil.copy2(src_f, dst_f)
+
         return tag, True
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as ex:

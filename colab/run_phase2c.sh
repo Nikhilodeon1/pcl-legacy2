@@ -15,6 +15,7 @@ SEEDS="${SEEDS:-42 43 44 45 46}"
 export NUM_WORKERS="${NUM_WORKERS:-0}"
 P2C_DIR="$PCL_LEGACY2_PRETRAIN_DIR/phase2c"
 mkdir -p "$P2C_DIR" results/phase2c/pretrain results/phase2c/sepsis results/phase2c/los_T24 results/revision/logs "$PCL_COLAB_PERSIST/results_phase2c"
+cp -rn "$PCL_COLAB_PERSIST/results_phase2c/"* results/phase2c/ 2>/dev/null || true
 
 echo "=== Running Phase 2c Reviewer Experiments (JOBS=$JOBS) ==="
 python3 scripts/run_phase2c_reviewer.py --jobs "$JOBS" --seeds $SEEDS --out-dir "$P2C_DIR"

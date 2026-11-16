@@ -52,7 +52,10 @@ def main():
                                       "--precision", "fp32", "--no-balancer",
                                       "--out-dir", args.out_dir]))
 
-    logging.info(f"Queued {len(commands)} ablation jobs ({len(args.seeds)} seeds x 2 conditions)")
+    only = [c for c in os.environ.get("CONDITIONS", "").split() if c]
+    if only:
+        commands = [c for c in commands if any(c[0].startswith(p) for p in only)]
+    logging.info(f"Queued {len(commands)} ablation jobs ({len(args.seeds)} seeds)")
 
     # Execute with worker pool
     import concurrent.futures
@@ -114,6 +117,20 @@ def main():
                                 "--fixed-T", "24", "--pretrain-ckpt", pt_path, "--encoder-id", tag,
                                 "--results-subdir", "phase2b/los_T24"],
                                env=env, stdout=lf, stderr=subprocess.STDOUT)
+
+        persist = os.environ.get("PCL_COLAB_PERSIST")
+        if persist and os.path.isdir(persist):
+            p_base = os.path.join(persist, "results_phase2b")
+            for src_f, rel_dst in [
+                (dest_json, os.path.join("pretrain", f"{tag}.json")),
+                (sep_json, os.path.join("sepsis", f"{tag}_s{seed}.json")),
+                (os.path.join(sep_out, "preds", f"{tag}_s{seed}_site_b.npz"), os.path.join("sepsis", "preds", f"{tag}_s{seed}_site_b.npz")),
+                (los_json, os.path.join("los_T24", f"{tag}_s{seed}.json")),
+            ]:
+                if os.path.exists(src_f):
+                    dst_f = os.path.join(p_base, rel_dst)
+                    os.makedirs(os.path.dirname(dst_f), exist_ok=True)
+                    shutil.copy2(src_f, dst_f)
 
         return tag, True
 

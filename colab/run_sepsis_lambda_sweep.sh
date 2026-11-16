@@ -17,6 +17,17 @@ PRETRAIN_DIR="${REPO_DIR}/results/pretrain_lambda_sweep"
 cd "${REPO_DIR}"
 mkdir -p "${RESULTS_DIR}" "${PRETRAIN_DIR}" "${CACHE_DIR}"
 
+# Restore persisted lambda sweep checkpoints/results from Google Drive if present
+if [ -d "/content/drive/MyDrive" ]; then
+    mkdir -p "${PERSIST_DIR}/pretrain_lambda_sweep" "${PERSIST_DIR}/sepsis_lambda_sweep"
+    cp -ru "${PERSIST_DIR}/pretrain_lambda_sweep/"* "${PRETRAIN_DIR}/" 2>/dev/null || true
+    cp -ru "${PERSIST_DIR}/sepsis_lambda_sweep/"* "${RESULTS_DIR}/" 2>/dev/null || true
+    # Reuse any lam0 / lam0.5 fp32 checkpoints already trained in Stage 1 (head pilot)
+    for f in "${PERSIST_DIR}/pretrained"/lam0_p*_fp32.* "${PERSIST_DIR}/pretrained"/lam0.5_p*_fp32.*; do
+        [ -f "$f" ] && cp -u "$f" "${PRETRAIN_DIR}/" 2>/dev/null || true
+    done
+fi
+
 export PCL_TEST_MODE=0
 export NUM_WORKERS="${NUM_WORKERS:-0}"
 export PCL_LEGACY2_CACHE_DIR="${CACHE_DIR}"
@@ -70,6 +81,13 @@ for lam in "${LAMBDAS[@]}"; do
                 --cache-dir "${CACHE_DIR}"
         else
             echo "[skip] Sepsis fine-tune exists: ${ft_json}"
+        fi
+
+        # Checkpoint sync to Google Drive after every (lam, seed)
+        if [ -d "/content/drive/MyDrive" ]; then
+            mkdir -p "${PERSIST_DIR}/pretrain_lambda_sweep" "${PERSIST_DIR}/sepsis_lambda_sweep"
+            cp -ru "${PRETRAIN_DIR}/"* "${PERSIST_DIR}/pretrain_lambda_sweep/" 2>/dev/null || true
+            cp -ru "${RESULTS_DIR}/"* "${PERSIST_DIR}/sepsis_lambda_sweep/" 2>/dev/null || true
         fi
     done
 done

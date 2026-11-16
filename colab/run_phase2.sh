@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Phase-2 pretraining + sepsis/LOS fine-tuning runner for Google Colab (PhysioNet 2019 only).
 #
-#   EXP=amp    lambda {0, 0.5, 1} x seeds x precision {amp, fp32}
-#   EXP=leak   lambda {0, 0.5}    x seeds x fp32 x {no extra, Site B unlabeled in pretraining}
-#   EXP=all    both (shared fp32 / no-extra jobs run once)
+#   EXP=amp          lambda {0, 0.5, 1} x seeds x precision {amp, fp32}
+#   EXP=leak         lambda {0, 0.5}    x seeds x fp32 x {no extra, Site B unlabeled in pretraining}
+#   EXP=clean_sepsis lambda {0, 0.5}    x seeds x fp32 (Sepsis only, for extending 10-seed clean arms)
+#   EXP=all          amp + leak (shared fp32 / no-extra jobs run once)
 #
 # Defaults to JOBS=2 and NUM_WORKERS=0 for standard 12.7 GB Colab T4/L4 runtimes.
 # Automatically backs up results/phase2/ to $PCL_COLAB_PERSIST/results_phase2 after every job.
@@ -25,6 +26,7 @@ add() { echo "$1 $2 $3 $4" >> "$LIST"; }
 for S in $SEEDS; do
   if [ "$EXP" = "amp" ] || [ "$EXP" = "all" ]; then for L in 0 0.5 1; do for P in amp fp32; do add $L $S $P none; done; done; fi
   if [ "$EXP" = "leak" ] || [ "$EXP" = "all" ]; then for L in 0 0.5; do add $L $S fp32 none; add $L $S fp32 pb; done; fi
+  if [ "$EXP" = "clean_sepsis" ]; then for L in 0 0.5; do add $L $S fp32 none; done; fi
 done
 sort -u "$LIST" -o "$LIST"
 echo "$(wc -l < "$LIST") jobs, $JOBS at a time (persist=$PCL_COLAB_PERSIST)"
@@ -37,8 +39,10 @@ run_job() {
   cp -f "$PH2/$TAG.json" results/phase2/pretrain/
   PCL_DISABLE_AMP=1 python3 scripts/finetune_sepsis.py --pretrain-ckpt "$PH2/$TAG.pt" --encoder-id "$TAG" --seed "$S" --out-dir results/phase2/sepsis >> "$LOG" 2>&1 \
     || echo "[$(date +%H:%M:%S)] $TAG sepsis fine-tune FAILED"
-  PCL_DISABLE_AMP=1 python3 scripts/finetune_los.py --method pcl --seed "$S" --fixed-T 24 --pretrain-ckpt "$PH2/$TAG.pt" --encoder-id "$TAG" \
-    --results-subdir phase2/los_T24 >> "$LOG" 2>&1 || echo "[$(date +%H:%M:%S)] $TAG LOS fine-tune FAILED"
+  if [ "$EXP" != "clean_sepsis" ]; then
+    PCL_DISABLE_AMP=1 python3 scripts/finetune_los.py --method pcl --seed "$S" --fixed-T 24 --pretrain-ckpt "$PH2/$TAG.pt" --encoder-id "$TAG" \
+      --results-subdir phase2/los_T24 >> "$LOG" 2>&1 || echo "[$(date +%H:%M:%S)] $TAG LOS fine-tune FAILED"
+  fi
   cp -rf results/phase2/* "$PCL_COLAB_PERSIST/results_phase2/" 2>/dev/null || true
   echo "[$(date +%H:%M:%S)] $TAG done in $(( ($(date +%s)-T0)/60 )) min"
 }
