@@ -290,6 +290,8 @@ CONFIRMATORY_SPECS = [
 
 EXPLORATORY_SPECS = [
     ("E1. Sepsis: PCL High-Budget 80k vs 10k", "PCL Matched-Vol (80k)", "PCL Clean (10k)", "site_b_auroc"),
+    ("E1b. Sepsis: ERM High-Budget 80k vs 10k", "ERM Matched-Vol (80k)", "ERM Clean (10k)", "site_b_auroc"),
+    ("E1c. Sepsis: PCL vs ERM at Matched 80k", "PCL Matched-Vol (80k)", "ERM Matched-Vol (80k)", "site_b_auroc"),
     ("E2. Sepsis: PCL 80k vs ERM 25k", "PCL Matched-Vol (80k)", "ERM Matched-Vol (25k)", "site_b_auroc"),
     ("E3. Sepsis: ERM 10k vs Supervised Scratch", "ERM Clean (10k)", "Supervised Scratch", "site_b_auroc"),
     ("E4. Sepsis: PCL 10k vs Supervised Scratch", "PCL Clean (10k)", "Supervised Scratch", "site_b_auroc"),
@@ -308,6 +310,7 @@ def discover_siteb_preds(pred_dirs):
         "erm_matched_vol_p": "ERM Matched-Vol (25k)",
         "lam0.5_p": "PCL Clean (10k)",
         "pcl_matched_vol_p": "PCL Matched-Vol (25k)",
+        "erm_matched_vol_n80000_p": "ERM Matched-Vol (80k)",
         "pcl_matched_vol_n80000_p": "PCL Matched-Vol (80k)",
         "pcl_maponly_p": "PCL MAP-Only (10k)",
         "pcl_nohh_p": "PCL No-HH (10k)",

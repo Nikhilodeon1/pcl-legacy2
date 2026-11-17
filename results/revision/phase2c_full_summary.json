@@ -436,6 +436,14 @@
         ]
       }
     },
+    "ERM Matched-Vol (80k)": {
+      "l2_norm": null,
+      "spread": null,
+      "const_frac": null,
+      "site_b_auroc": null,
+      "site_b_auprc": null,
+      "los_site_b_r2": null
+    },
     "PCL Matched-Vol (80k)": {
       "l2_norm": {
         "mean": 289.3503753662109,
@@ -1460,6 +1468,78 @@
         "l2_norm": 152.57504272460938,
         "spread": 0.21046213805675507,
         "const_frac": 0.9851353168487549
+      }
+    },
+    "ERM Matched-Vol (80k)": {
+      "42": {
+        "site_a_auroc": null,
+        "site_b_auroc": null,
+        "site_b_auprc": null,
+        "site_b_ece": null,
+        "site_b_brier": null,
+        "los_site_a_r2": null,
+        "los_site_a_mae": null,
+        "los_site_b_r2": null,
+        "los_site_b_mae": null,
+        "l2_norm": null,
+        "spread": null,
+        "const_frac": null
+      },
+      "43": {
+        "site_a_auroc": null,
+        "site_b_auroc": null,
+        "site_b_auprc": null,
+        "site_b_ece": null,
+        "site_b_brier": null,
+        "los_site_a_r2": null,
+        "los_site_a_mae": null,
+        "los_site_b_r2": null,
+        "los_site_b_mae": null,
+        "l2_norm": null,
+        "spread": null,
+        "const_frac": null
+      },
+      "44": {
+        "site_a_auroc": null,
+        "site_b_auroc": null,
+        "site_b_auprc": null,
+        "site_b_ece": null,
+        "site_b_brier": null,
+        "los_site_a_r2": null,
+        "los_site_a_mae": null,
+        "los_site_b_r2": null,
+        "los_site_b_mae": null,
+        "l2_norm": null,
+        "spread": null,
+        "const_frac": null
+      },
+      "45": {
+        "site_a_auroc": null,
+        "site_b_auroc": null,
+        "site_b_auprc": null,
+        "site_b_ece": null,
+        "site_b_brier": null,
+        "los_site_a_r2": null,
+        "los_site_a_mae": null,
+        "los_site_b_r2": null,
+        "los_site_b_mae": null,
+        "l2_norm": null,
+        "spread": null,
+        "const_frac": null
+      },
+      "46": {
+        "site_a_auroc": null,
+        "site_b_auroc": null,
+        "site_b_auprc": null,
+        "site_b_ece": null,
+        "site_b_brier": null,
+        "los_site_a_r2": null,
+        "los_site_a_mae": null,
+        "los_site_b_r2": null,
+        "los_site_b_mae": null,
+        "l2_norm": null,
+        "spread": null,
+        "const_frac": null
       }
     },
     "PCL Matched-Vol (80k)": {

@@ -103,6 +103,11 @@ def load_all_conditions(seeds=None):
             "los": lambda s: [f"results/phase2c/los_T24/pcl_matched_vol_p{s}_s{s}.json"],
             "pretrain": lambda s: [f"results/phase2c/pretrain/pcl_matched_vol_p{s}.json"],
         },
+        "ERM Matched-Vol (80k)": {
+            "sepsis": lambda s: [f"results/phase2c/sepsis/erm_matched_vol_n80000_p{s}_s{s}.json"],
+            "los": lambda s: [f"results/phase2c/los_T24/erm_matched_vol_n80000_p{s}_s{s}.json"],
+            "pretrain": lambda s: [f"results/phase2c/pretrain/erm_matched_vol_n80000_p{s}.json"],
+        },
         "PCL Matched-Vol (80k)": {
             "sepsis": lambda s: [f"results/phase2c/sepsis/pcl_matched_vol_n80000_p{s}_s{s}.json"],
             "los": lambda s: [f"results/phase2c/los_T24/pcl_matched_vol_n80000_p{s}_s{s}.json"],
@@ -223,6 +228,10 @@ def run_hypothesis_tests(data):
          "PCL Matched-Vol (25k)", "ERM Matched-Vol (25k)", "site_b_auroc"),
         ("4. Budget Curve: PCL High-Budget (80k Matched-Vol - 10k Clean)",
          "PCL Matched-Vol (80k)", "PCL Clean (10k)", "site_b_auroc"),
+        ("4b. Budget Curve: ERM High-Budget (80k Matched-Vol - 10k Clean)",
+         "ERM Matched-Vol (80k)", "ERM Clean (10k)", "site_b_auroc"),
+        ("4c. Budget Curve: PCL vs ERM at Matched 80k Volume (PCL 80k - ERM 80k)",
+         "PCL Matched-Vol (80k)", "ERM Matched-Vol (80k)", "site_b_auroc"),
         ("5. Budget Curve: PCL High-Budget vs ERM Mid-Budget (PCL 80k - ERM 25k)",
          "PCL Matched-Vol (80k)", "ERM Matched-Vol (25k)", "site_b_auroc"),
         ("6. Pretraining Utility: ERM Pretraining vs Scratch (ERM 10k - Scratch)",
@@ -247,6 +256,8 @@ def run_hypothesis_tests(data):
     for title, c_a, c_b, m in tests:
         vals_a = [data[c_a][s][m] for s in SEEDS]
         vals_b = [data[c_b][s][m] for s in SEEDS]
+        if any(a is None or b is None for a, b in zip(vals_a, vals_b)):
+            continue
         diffs = [a - b for a, b in zip(vals_a, vals_b)]
         res = paired_stats(diffs)
         results[title] = res

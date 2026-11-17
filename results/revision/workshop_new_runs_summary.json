@@ -1,0 +1,71 @@
+{
+  "head_pilot": {
+    "available": false,
+    "rows": []
+  },
+  "lambda_sweep": {
+    "available": false
+  },
+  "cohort_accounting": {
+    "total_stays": 230213,
+    "total_cohort_patients": 182618,
+    "cohorts": [
+      {
+        "dataset": "physionet_a",
+        "stays": 10381,
+        "patients": 10381,
+        "stays_per_patient_max": 1,
+        "frac_patients_multi_stay": 0.0,
+        "los_mean_h": 46.173971679028995,
+        "los_median_h": 43.0,
+        "los_p99_h": 168.20000000000073,
+        "los_max_h": 336.0,
+        "los_min_h": 24.0,
+        "frac_los_lt_48h": 0.6648685097774781
+      },
+      {
+        "dataset": "physionet_b",
+        "stays": 14779,
+        "patients": 14779,
+        "stays_per_patient_max": 1,
+        "frac_patients_multi_stay": 0.0,
+        "los_mean_h": 45.25218215034847,
+        "los_median_h": 42.0,
+        "los_p99_h": 157.21999999999935,
+        "los_max_h": 336.0,
+        "los_min_h": 24.0,
+        "frac_los_lt_48h": 0.6888152107720414
+      },
+      {
+        "dataset": "mimic",
+        "stays": 74607,
+        "patients": 54427,
+        "stays_per_patient_max": 37,
+        "frac_patients_multi_stay": 0.21910081393426056,
+        "los_mean_h": 105.35474486308256,
+        "los_median_h": 60.01416666666667,
+        "los_p99_h": 693.343688888889,
+        "los_max_h": 5433.6738888888885,
+        "los_min_h": 24.0,
+        "frac_los_lt_48h": 0.38131810688005147,
+        "mortality_hospital_prev": 0.11888964842441058,
+        "n_deaths": 8870
+      },
+      {
+        "dataset": "eicu",
+        "stays": 130446,
+        "patients": 103031,
+        "stays_per_patient_max": 17,
+        "frac_patients_multi_stay": 0.1840222845551339,
+        "los_mean_h": 90.37345734377955,
+        "los_median_h": 55.65,
+        "los_p99_h": 530.8508333333339,
+        "los_max_h": 12152.933333333332,
+        "los_min_h": 24.0,
+        "frac_los_lt_48h": 0.41391073700995046,
+        "mortality_hospital_prev": 0.09097250969749934,
+        "n_deaths": 11867
+      }
+    ]
+  }
+}
