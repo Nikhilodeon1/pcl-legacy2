@@ -335,7 +335,8 @@ def discover_siteb_preds(pred_dirs):
                 continue
             # Extract trailing fine-tune seed _s<seed>_site_b.npz
             try:
-                seed_part = base.rsplit("_s", 1)[1].split("_")[0]
+                stem = base[:-len("_site_b.npz")]
+                seed_part = stem.rsplit("_s", 1)[1].split("_")[0]
                 seed_val = int(seed_part)
             except (IndexError, ValueError):
                 continue

@@ -1,0 +1,29 @@
+{
+  "fixed_T": 24,
+  "encoder_id": "erm_matched_vol_n80000_p45",
+  "pretrain_ckpt": "/content/drive/MyDrive/pcl_colab/pretrained/phase2c/erm_matched_vol_n80000_p45.pt",
+  "method": "pcl",
+  "seed": 45,
+  "task": "los_h",
+  "epochs": 30,
+  "fraction": 1.0,
+  "n_source": 10381,
+  "n_targets": {
+    "physionet_b": 14779
+  },
+  "in_domain": {
+    "mae_hours": 12.024076250410104,
+    "rmse_hours": 25.79242939832449,
+    "r2": 0.024971948160531277,
+    "n": 2077
+  },
+  "ood": {
+    "physionet_b": {
+      "mae_hours": 11.151729191912974,
+      "rmse_hours": 23.44645890281217,
+      "r2": -0.04112704844142856,
+      "n": 14779
+    }
+  },
+  "elapsed_sec": 163.27238988876343
+}

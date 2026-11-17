@@ -1,0 +1,148 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.72in,columnsep=0.22in]{geometry}
+\usepackage{times}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black}
+
+\title{\textbf{When Physiology-Constrained Pretraining Fails to Transfer:}\\
+\large Optimization Interference, Evaluation Shortcuts, and Representation Collapse Across 230k ICU Stays}
+
+\author{Anonymous Author(s) \\
+\small Submission for AAAI Workshop Evaluation}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Incorporating differentiable physiological laws into clinical foundation model pretraining promises stronger cross-hospital generalization by regularizing latent dynamics toward domain invariants. Across \textbf{230,213} ICU stays ($182,618$ cohort-unique patients) spanning four cohorts (\textit{PhysioNet 2019 Site A/B}, \textit{MIMIC-IV v3.1}, and \textit{eICU-CRD v2.0}) and three tasks (sepsis onset, in-hospital mortality, and length of stay), we systematically audit physiology-constrained learning (PCL) against standard masked empirical risk minimization (ERM) under strict cohort hygiene, matched compute budgets, and non-parametric statistical testing. We uncover four negative and mechanistic results: (1) under matched pretraining volume ($25{,}160$ stays / $10{,}800$ steps), PCL underperforms ERM on zero-shot \textit{Site B} sepsis transfer by $\Delta = -0.0634$ AUROC ($p_t = 0.0052$, $p_{\mathrm{perm}} = 0.0625$), and even at $80{,}000$ stays ($30{,}000$ steps) PCL ($0.7255$) still trails equal-budget ERM ($0.7529$); (2) varying constraint weight $\lambda \in [0, 1]$ demonstrates a monotonic optimization dose: PCL's average loss share rises from $0\%$ to $44.7\%$ ($\rho = 0.990, p = 6.7\times 10^{-15}$) while final gradient norms surge $384\times$ ($0.069 \to 26.43$), driving $L_2$ representation inflation ($106.8 \to 169.3$) and spread compression; (3) adding LayerNorm or LP-FT to the classification head eliminates PCL's constant-logit collapses ($1/3 \to 0/3$) on $T=24$ sepsis without rescuing OOD transfer ($0.5875$ vs.\ $0.6031$ ERM); and (4) previously reported neural length-of-stay transfer ($R^2 = +0.229$) is an artifact of post-discharge padding that vanishes under fixed observation windows ($T=24$, $R^2 \le 0$). Finally, constraint ablations reveal sensitivity to cross-hospital arterial blood gas documentation shifts, while non-neural HistGBM baselines ($0.819$--$0.830$ fixed-$T=48$ mortality AUROC) expose a substantial neural architectural ceiling.
+\end{abstract}
+
+\section{Introduction}
+Clinical time-series models routinely degrade when deployed across hospitals due to shifts in laboratory ordering cadence, documentation workflows, EHR encoding, and patient acuity mix. A compelling inductive bias is \emph{physiology-constrained learning} (PCL): penalizing masked-reconstruction pretraining with violations of differential/algebraic physiological laws—such as mean arterial pressure conservation ($\text{MAP} \approx \text{DBP} + \frac{1}{3}(\text{SBP}-\text{DBP})$), pulse pressure bounds, shock index, Henderson--Hasselbalch acid-base equilibrium, and Severinghaus $\text{SpO}_2$ kinetics—so encoders rely on physiological invariants rather than hospital-specific shortcuts.
+
+Prior preliminary evaluations suggested PCL improved cross-hospital transfer and enabled unsupervised checkpoint selection via constraint violation. However, rigorous audit experiments reveal that apparent gains can be confounded by unmatched pretraining step counts, post-discharge sequence padding, unnormalized representation norms, and cross-site documentation differences. In this workshop paper, we present a controlled, pre-registration-backed dissection of \emph{when and why} physiological constraints impede downstream transfer. Our contributions are threefold:
+\begin{enumerate}
+    \item \textbf{Controlled 2$\times$2 Budget \& Ablation Dissection:} Matching pretraining volume and steps ($10\text{k} \to 25\text{k} \to 80\text{k}$ stays) shows that ERM consistently outperforms PCL across all compute budgets, while a randomly permuted \textit{Placebo} constraint degrades transfer comparably to full PCL.
+    \item \textbf{Mechanistic Dose-Response \& Head-Conditioning Audits:} Sweeping $\lambda \in \{0, 0.01, 0.05, 0.1, 0.5, 1\}$ exposes a $384\times$ pretraining gradient-norm explosion alongside monotone $L_2$ norm growth. A head-normalization pilot (\texttt{LayerNorm} and \texttt{LP-FT}) eliminates constant-output collapses ($1/3 \to 0/3$) yet fails to close the ERM--PCL gap.
+    \item \textbf{Evaluation Pitfalls \& Tabular Baselines:} We quantify post-discharge padding leakage in variable-window length-of-stay (LOS) prediction, show acid-base documentation shift (Henderson--Hasselbalch) penalizes multi-constraint encoders, and benchmark compact 6-layer Transformers against \texttt{HistGBM} across all three tasks.
+\end{enumerate}
+
+\section{Cohorts, Architecture, and Protocol}
+\paragraph{Cohort Accounting.}
+Table~\ref{tab:cohort} summarizes all four datasets totaling \textbf{230,213 ICU stays} ($182,618$ cohort-unique patients) across $17$ harmonized physiological variables mapped with fixed clinical plausibility bounds (\texttt{MinMaxNormalizer}, no split-derived normalization statistics). All PhysioNet 2019 stays represent unique patients; MIMIC-IV and eICU-CRD permit multi-stay admissions. Note that both \textit{PhysioNet Site A} and \textit{MIMIC-IV} originate from Beth Israel Deaconess Medical Center (BIDMC), representing institutional EHR shift rather than disjoint health systems. On \textit{PhysioNet Site B}, true sepsis prevalence is $2.057\%$ ($304/14{,}779$), yielding an uninformative constant-predictor Brier baseline of $p(1-p) = 0.02015$. For fixed-$T=48$ mortality evaluation, retaining stays $\ge 48$ hours yields $46{,}158$ MIMIC-IV and $76{,}453$ eICU-CRD stays ($122,611$ total).
+
+\begin{table}[t]
+\centering
+\caption{Reconciled multi-site cohort accounting across 230,213 stays ($182,618$ cohort-unique patients). In-hospital mortality labels exist on MIMIC-IV and eICU-CRD; sepsis and continuous LOS exist on PhysioNet.}
+\label{tab:cohort}
+\scriptsize
+\begin{tabular}{lrrrrr}
+\toprule
+Cohort & Stays & Patients & LOS Mean & $<48$h & Mort. Prev. \\
+\midrule
+PhysioNet Site A & 10,381 & 10,381 & 46.2 h & 66.5\% & n/a \\
+PhysioNet Site B & 14,779 & 14,779 & 45.3 h & 68.9\% & n/a \\
+MIMIC-IV v3.1 & 74,607 & 54,427 & 105.4 h & 38.1\% & 11.89\% \\
+eICU-CRD v2.0 & 130,446 & 103,031 & 90.4 h & 41.4\% & 9.10\% \\
+\midrule
+\textbf{Total} & \textbf{230,213} & \textbf{182,618} & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Architecture \& Optimization.}
+We pretrain a 6-layer Transformer ($d_{\mathrm{model}}=256$, $3.2\text{M}$ parameters) for $30$ epochs in FP32 with masked reconstruction (mask probability $0.3$, AdamW, cosine schedule) plus optional PCL constraints weighted by $\lambda$ using an adaptive EMA loss balancer ($\mathrm{momentum}=0.95$). Fine-tuning uses a two-phase discriminative learning-rate schedule ($30$ epochs: frozen encoder for 10 epochs, then unfreezing with encoder LR $0.1\times$ head LR) selected on $20\%$ source-validation AUROC (sepsis/mortality) or validation loss ($\log(1+\mathrm{LOS})$, evaluated back in hours). Target-exposed arms (\textit{transductive pretraining}) resample unlabeled Site B stays without labels.
+
+\paragraph{Statistical Rigor.}
+Small-$n$ paired contrasts ($n=5$ seeds: $42\text{--}46$) are separated into a \textbf{Confirmatory} family and an \textbf{Exploratory} ablation family. Because the two-sided exact sign-flip permutation test ($2^5 = 32$ sign flips) has a minimum achievable $p$-value of $2/32 = 0.0625$ at $n=5$, we report both paired $t$-tests and exact permutation $p$-values alongside \textbf{Holm--Bonferroni} family adjustments, \textbf{TOST} equivalence tests (margins $\Delta \in \{0.01, 0.02\}$ AUROC), and tie-safe \textbf{patient-level cluster bootstrap} ($B \in \{5{,}000, 10{,}000\}$) on Site B test predictions whenever per-stay predictions are retained. We never equate non-significance ($p > 0.05$) with equivalence unless TOST passes.
+
+\section{Results}
+
+\subsection{2$\times$2 Factorial Budget Scaling \& Mechanistic Ablations}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig1_budget_and_ablations.pdf}
+\caption{\textbf{A.} Sepsis transfer on \textit{PhysioNet Site B} across matched pretraining budgets ($10\text{k} \to 25\text{k} \to 80\text{k}$ resampled Site A stays; $n=5$ seeds, $\pm$ SD). ERM improves steadily to $0.753$, consistently outperforming PCL ($0.726$ at 80k) and surpassing the 119-feature HistGBM ($T=24$) baseline ($0.713$). \textbf{B.} Mechanistic and constraint ablations at 10k volume.}
+\label{fig:fig1}
+\end{figure*}
+
+Table~\ref{tab:phase2c} and Figure~\ref{fig:fig1} synthesize the controlled Sepsis and fixed-$T=24$ LOS results across $n=5$ paired seeds ($42\text{--}46$).
+
+\begin{table*}[t]
+\centering
+\caption{PhysioNet Site A $\to$ Site B transfer across controlled pretraining budgets, constraint ablations, and representation interventions ($n=5$ paired seeds $42\text{--}46$, mean $\pm$ SD).}
+\label{tab:phase2c}
+\scriptsize
+\begin{tabular}{lcccccc}
+\toprule
+Condition & Steps & $L_2$ Norm (h47) & Spread (h47) & Site B Sepsis AUROC & Site B AUPRC & LOS $T=24$ $R^2$ \\
+\midrule
+Supervised Scratch (Random Init) & 0 & --- & --- & $0.6495 \pm 0.0248$ & $0.1220 \pm 0.0125$ & $-0.0072 \pm 0.0129$ \\
+ERM Clean (10k Site A) & 3.9k & $106.80 \pm 3.45$ & $0.2247 \pm 0.0063$ & $0.6920 \pm 0.0313$ & $0.1273 \pm 0.0265$ & --- \\
+ERM Matched-Vol (25k Site A) & 10.8k & $73.74 \pm 3.71$ & $0.5350 \pm 0.0176$ & $0.7289 \pm 0.0336$ & $\mathbf{0.1506 \pm 0.0115}$ & $-0.0041 \pm 0.0078$ \\
+ERM Target-Exposed (25k A+B) & 10.8k & $72.50 \pm 7.93$ & $0.5302 \pm 0.0546$ & $0.7269 \pm 0.0335$ & $0.1462 \pm 0.0259$ & --- \\
+\textbf{ERM Matched-Vol (80k Site A)} & 30.0k & $\mathbf{59.80 \pm 4.12}$ & $\mathbf{0.8149 \pm 0.0331}$ & $\mathbf{0.7529 \pm 0.0337}$ & $0.1181 \pm 0.0244$ & $-0.0477 \pm 0.0384$ \\
+\midrule
+PCL Clean (10k, $\lambda=0.5$, EMA) & 3.9k & $164.11 \pm 5.89$ & $0.1098 \pm 0.0060$ & $0.6709 \pm 0.0348$ & $0.1223 \pm 0.0061$ & --- \\
+PCL Fixed-Weight (No Balancer) & 3.9k & $182.44 \pm 6.15$ & $0.1061 \pm 0.0034$ & $0.6562 \pm 0.0204$ & $0.0799 \pm 0.0397$ & $-0.0146 \pm 0.0251$ \\
+PCL Matched-Vol (25k Site A) & 10.8k & $154.73 \pm 13.33$ & $0.2185 \pm 0.0171$ & $0.6655 \pm 0.0303$ & $0.1244 \pm 0.0146$ & $-0.0392 \pm 0.0526$ \\
+PCL Target-Exposed (25k A+B) & 10.8k & $151.96 \pm 6.82$ & $0.2334 \pm 0.0128$ & $0.6808 \pm 0.0331$ & $0.1296 \pm 0.0170$ & --- \\
+PCL Matched-Vol (80k Site A) & 30.0k & $289.35 \pm 54.11$ & $0.2832 \pm 0.0461$ & $0.7255 \pm 0.0362$ & $0.1497 \pm 0.0238$ & $-0.0249 \pm 0.0077$ \\
+\midrule
+PCL MAP-Only (10k, HH=0, SpO2=0) & 3.9k & $160.04 \pm 8.16$ & $0.1143 \pm 0.0051$ & $0.6831 \pm 0.0215$ & $0.1395 \pm 0.0228$ & $-0.0173 \pm 0.0191$ \\
+PCL No-HH (10k, MAP+SpO2) & 3.9k & $160.76 \pm 3.49$ & $0.1126 \pm 0.0048$ & $0.6828 \pm 0.0267$ & $0.1417 \pm 0.0282$ & $-0.0026 \pm 0.0114$ \\
+PCL Placebo (10k, Permuted) & 3.9k & $120.15 \pm 18.73$ & $0.1559 \pm 0.0859$ & $0.6627 \pm 0.0255$ & $0.1014 \pm 0.0225$ & $-0.0185 \pm 0.0081$ \\
+PCL + VICReg (10k, Decorrelated) & 3.9k & $87.08 \pm 1.52$ & $0.0443 \pm 0.0015$ & $0.6149 \pm 0.0460$ & $0.0605 \pm 0.0434$ & $-0.0147 \pm 0.0184$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\paragraph{Matched-Budget Comparisons \& Statistical Tests.}
+Resampling Site A from $10\text{k} \to 25\text{k}$ stays improves ERM ($\Delta = +0.0368$, $95\%$ CI $[+0.0006, +0.0730]$, $p_t = 0.0476$, $p_{\mathrm{perm}} = 0.0625$) while leaving PCL flat ($\Delta = -0.0054, p_t = 0.8157$). At matched $25\text{k}$ volume ($10{,}800$ steps), PCL trails ERM by $\Delta = -0.0634$ AUROC ($95\%$ CI $[-0.0952, -0.0315]$, $p_t = 0.0052$, $p_{\mathrm{perm}} = 0.0625$, $p_{\mathrm{Holm}} = 0.3750$). Crucially, while scaling PCL to $80\text{k}$ stays raises AUROC to $0.7255$ (previously tempting comparisons to ERM-25k at $0.7289$, though TOST does not establish equivalence, $p_{\mathrm{TOST}}(\le 0.02) = 0.301$), our equal-budget \textbf{ERM 80k} control reaches $\mathbf{0.7529 \pm 0.0337}$ (Site B patient-level cluster bootstrap $95\%$ CI $[0.7291, 0.7763]$)---meaning ERM continues to scale cleanly ($+0.0608$ over ERM 10k, $p_t = 0.0212$) and retains a $+0.0274$ lead over PCL at 80k. Against Supervised Scratch ($0.6495$), ERM-10k and ERM-25k improve transfer by $+0.0425$ ($p_t = 0.0109$) and $+0.0793$ ($p_t = 0.0058$), whereas PCL-10k yields no statistically detectable gain ($+0.0214$, $p_t = 0.4243$).
+
+\paragraph{Placebo, Constraint Ablations \& VICReg.}
+Applying identical loss forms to \emph{randomly permuted channels} (\textit{PCL Placebo}, $0.6627$) trails ERM-10k by $-0.0294$ ($p_t = 0.0057$) and cannot be distinguished from Full PCL ($\Delta = -0.0082$, $p_t = 0.7226$, TOST $p=0.307$). Removing acid-base equilibrium (\textit{No-HH}: $0.6828$) or keeping only MAP (\textit{MAP-Only}: $0.6831$) trends above Full PCL ($0.6709$), consistent with a documented $50\times$ arterial blood gas ordering drop on Site B distorting Henderson--Hasselbalch constraints. Conversely, forcing representation decorrelation via VICReg reduces $L_2$ norm to $87.08$ (below ERM) but drops spread to $0.0443$ and degrades Site B AUROC to $0.6149$ (below scratch).
+
+\subsection{Mechanistic \texorpdfstring{$\lambda$}{lambda} Dose-Response \& Gradient Spike}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_lambda_dose_response.pdf}
+\caption{Fine-grained $\lambda \in \{0, 0.01, 0.05, 0.1, 0.5, 1.0\}$ pretraining sweep ($n=3$ seeds $42\text{--}44$). \textbf{A.} Final pretraining gradient norm increases $384\times$ above the $1.0$ clipping cap while PCL's weighted loss share climbs monotonically to $44.7\%$. \textbf{B.} Hour-47 representation $L_2$ norm inflates ($106.8 \to 169.3$) while across-stay spread compresses ($0.225 \to 0.106$). \textbf{C.} Site B sepsis AUROC with $95\%$ patient-level cluster bootstrap CIs ($B=5{,}000$).}
+\label{fig:fig2}
+\end{figure*}
+
+To test whether $\lambda$ induces a true optimization dose despite the EMA loss balancer, we pretrained and evaluated $\lambda \in \{0, 0.01, 0.05, 0.1, 0.5, 1.0\}$ across $n=3$ seeds ($42\text{--}44$) while logging step gradient norms and weighted constraint loss share (Figure~\ref{fig:fig2}).
+\begin{itemize}
+    \item \textbf{True Dose Confirmation:} Average weighted PCL loss share rises strictly monotonically from $0.00\%$ ($\lambda=0$) $\to 0.82\%$ ($0.01$) $\to 4.44\%$ ($0.05$) $\to 8.22\%$ ($0.1$) $\to 30.06\%$ ($0.5$) $\to 44.72\%$ ($1.0$) (Spearman $\rho = 0.990, p = 6.7 \times 10^{-15}$).
+    \item \textbf{384$\times$ Gradient Explosion:} Final epoch gradient norm surges from $0.0689$ ($\lambda=0$) and $0.0851$ ($\lambda=0.01$) through the $1.0$ clipping threshold at $\lambda=0.1$ ($2.41$) to $17.35$ ($\lambda=0.5$) and $26.43$ ($\lambda=1.0$), inflating hour-47 $L_2$ norm ($106.8 \to 169.3$) and compressing across-stay spread ($0.225 \to 0.106$).
+    \item \textbf{Downstream Transfer Regimes:} Patient-level paired bootstrap on Site B ($14{,}779$ stays, $304$ positives) shows small $\lambda \le 0.1$ tracks ERM ($0.6868$ at $\lambda=0$ vs.\ $0.6952$ at $0.01$ [$p_{\mathrm{boot}}=0.051$] and $0.6968$ at $0.1$ [$p_{\mathrm{boot}}=0.093$]), whereas $\lambda \ge 0.5$ degrades significantly ($0.6579$ at $\lambda=0.5$, $\Delta = -0.0292$, $p_{\mathrm{boot}}<0.001$; $0.6652$ at $\lambda=1.0$, $\Delta = -0.0217$, $p_{\mathrm{boot}}=0.024$). (Noise at $\lambda=0.05$ gives $0.6539$, leaving checkpoint-level Spearman $\rho = -0.216, p = 0.389$ across the 18 runs.)
+\end{itemize}
+
+\subsection{Head Normalization Pilot \& Cross-Task Findings}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig3_head_pilot_and_tasks.pdf}
+\caption{\textbf{A.} Head conditioning pilot on fixed-$T=24$ Sepsis ($n=3$ seeds): adding \texttt{LayerNorm} or \texttt{LP-FT} removes PCL's $1/3$ training collapse but does not yield transfer gains over ERM. \textbf{B.} Fixed-$T=48$ Mortality bidirectional transfer: PCL suffers $1/3$ complete $0.500$ collapses in both directions ($0.626$ / $0.614$) vs.\ $0/3$ for ERM ($0.725$ / $0.750$), while tabular \texttt{HistGBM} reaches $0.819$--$0.830$.}
+\label{fig:fig3}
+\end{figure*}
+
+Because PCL inflates representation $L_2$ norms ($164$ vs.\ $107$ for ERM at $10\text{k}$, $289$ vs.\ $60$ at $80\text{k}$), a critical confound is whether unnormalized classification heads simply saturate gradients during fine-tuning. Figure~\ref{fig:fig3}A tests \texttt{baseline} vs.\ \texttt{LayerNorm} head vs.\ \texttt{LP-FT} (\texttt{LayerNorm} + $10\times$ lower encoder LR $10^{-5}$) on PhysioNet Sepsis ($T=24$, $n=3$ seeds): while \texttt{baseline} PCL exhibited $1/3$ constant-logit collapses during training ($0.5862 \pm 0.0340$ OOD) and both \texttt{LayerNorm} and \texttt{LP-FT} eliminated collapses ($0/3$), OOD AUROC remained $0.5875$ (\texttt{LayerNorm}) and $0.5863$ (\texttt{LP-FT})---still trailing ERM (\texttt{LayerNorm} $0.6031$, \texttt{LP-FT} $0.5962$).
+
+On fixed-$T=48$ bidirectional \textbf{Mortality} (\textit{MIMIC-IV} $\leftrightarrow$ \textit{eICU-CRD}, Figure~\ref{fig:fig3}B), FP32 ERM achieves $0.7250 \pm 0.0022$ (\texttt{MIMIC->eICU}) and $0.7497 \pm 0.0065$ (\texttt{eICU->MIMIC}) with $0/6$ collapses, whereas FP32 PCL ($\lambda=0.5$) drops to $0.6262 \pm 0.1109$ (\texttt{MIMIC->eICU}, $1/3$ collapse at $0.499$) and $0.6145 \pm 0.1140$ (\texttt{eICU->MIMIC}, $1/3$ collapse at $0.500$). Crucially, a 5-feature-per-variable \texttt{HistGBM} on identical $T=48$ windows reaches $0.8631$ / $0.8573$ in-domain and $0.8192$ / $0.8303$ OOD, highlighting a substantial representation ceiling in the $3.2\text{M}$ Transformer. On \textbf{LOS}, variable-window $R^2$ ($+0.229$ on Site B) is an artifact of post-discharge zero-padding: restricting to $T=24$ (dropping $0\%$ of PhysioNet stays) collapses all models near $R^2 \le 0$ (Table~\ref{tab:phase2c}; tabular $T=24$ GBM $+0.033$ in-domain, $-0.028$ OOD).
+
+\section{Limitations and Future Work}
+Three limitations bound our conclusions. First, per credentialed PhysioNet Data Use Agreement (DUA) compliance, the \texttt{LayerNorm}/\texttt{LP-FT} head pilot was executed on public PhysioNet Sepsis on remote GPUs rather than credentialed MIMIC-IV/eICU mortality caches; whether head conditioning eliminates PCL's $0.500$ mortality collapses while keeping its AUROC below ERM ($0.725$--$0.750$) requires local DUA GPU verification. Second, confirmatory factorial contrasts currently span $n=5$ seeds ($42\text{--}46$), where the two-sided exact permutation floor ($0.0625$) limits Holm-Bonferroni power (\texttt{C4} $p_t = 0.0052$, $p_{\mathrm{Holm}} = 0.375$); scaling core arms to $n=10$ seeds ($0.00195$ floor) is left for full-track extension. Third, our $T=48$ Transformer trails tabular \texttt{HistGBM} by $\sim 0.08$--$0.10$ AUROC on mortality; testing stronger sequence backbones and gradient-norm-bounded constraint balancing (e.g.\ explicit gradient normalization rather than scalar loss EMA) remains promising future work.
+
+\section{Conclusion}
+Across $230{,}213$ ICU stays, physiology-constrained masked pretraining consistently failed to outperform standard ERM under matched volume and step budgets—falling behind ERM at $10\text{k}$ ($0.671$ vs.\ $0.692$), $25\text{k}$ ($0.666$ vs.\ $0.729$), and $80\text{k}$ ($0.726$ vs.\ $0.753$). Pretraining gradient-norm logging ($384\times$ surge), placebo controls, documentation-shift ablations, and head-normalization pilots converge on a clear diagnosis: naive algebraic constraint penalties distort optimization dynamics more than they encode transferable clinical invariance. Strict fixed-window evaluation, matched-budget baselines, placebo constraints, and patient-level non-parametric testing should be standard prerequisites before claiming clinical domain generalization.
+
+\end{document}

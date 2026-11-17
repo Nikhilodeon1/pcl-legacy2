@@ -171,10 +171,11 @@ def summarize_lambda_sweep(pt_dir, ft_dir):
     pred_records = {}
     for f in sorted(glob.glob(os.path.join(pred_dir, "*_site_b.npz"))):
         base = os.path.basename(f)
-        lam_part = base.split("_")[0].replace("lam", "")
-        seed_part = base.rsplit("_s", 1)[1].split("_")[0]
+        stem = base[:-len("_site_b.npz")]
+        lam_part = stem.split("_")[0].replace("lam", "")
+        seed_part = stem.rsplit("_s", 1)[1].split("_")[0]
         npz = np.load(f, allow_pickle=True)
-        pred_records[(f"lam={lam_part}", int(seed_part))] = {
+        pred_records[(f"lam={float(lam_part):g}", int(seed_part))] = {
             "probs": npz["probs"], "labels": npz["labels"],
             "pids": npz["pids"] if "pids" in npz else np.arange(len(npz["labels"])),
         }
