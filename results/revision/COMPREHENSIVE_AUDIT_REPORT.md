@@ -39,7 +39,10 @@ flowchart TD
 
 ## 2. Pillar I: Controlled Cross-Hospital Transfer Across Three Clinical Tasks
 
-### 2.1 Confirmatory 10-Seed Cross-Hospital Sepsis Transfer (Strict Site-A-Only Pretraining)
+### 2.1 Confirmatory 10-Seed Cross-Hospital Sepsis Transfer (Legacy Audit Reference)
+
+> [!WARNING]
+> **Provenance Audit Note (2026-11-17):** No JSON files backing these specific `0.7618 / 0.6972 / 0.6184 / 0.5842` 10-seed cross-site Sepsis numbers reside in the `pcl-legacy2` repository (`results/phase2/sepsis` contains PhysioNet Site A $\to$ Site B seeds `42–46` only). Do **not** cite Table 2.1 as repository-verified; rely on Table 2.2 (`n=5` seeds `42–46`), `phase2c_rigor_summary.json`, and `workshop_new_runs_summary.json`.
 
 Models were pretrained strictly on `PhysioNet Site A` ($N = 10,381$ stays) for 30 epochs ($3,870$ gradient steps) using a standardized 6-layer Transformer ($d=256$, 3.2M parameters) across $n = 10$ paired seeds (`42–51`). Target cohorts were evaluated zero-shot without target data exposure during pretraining. The pre-registered practical equivalence margin is $\Delta_{\text{equiv}} = \pm 0.010$ AUROC (`PREREG.md`).
 

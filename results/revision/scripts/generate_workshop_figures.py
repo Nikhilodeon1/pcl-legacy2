@@ -6,7 +6,6 @@ Generate publication-grade AAAI Workshop figures (PDF + PNG) directly from verif
 """
 import json
 import os
-import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -22,12 +21,12 @@ def set_style():
     plt.rcParams.update({
         "font.family": "serif",
         "font.size": 9.5,
-        "axes.titlesize": 10.5,
+        "axes.titlesize": 10.2,
         "axes.titleweight": "bold",
-        "axes.labelsize": 9.5,
-        "xtick.labelsize": 8.5,
-        "ytick.labelsize": 8.5,
-        "legend.fontsize": 8.0,
+        "axes.labelsize": 9.2,
+        "xtick.labelsize": 8.2,
+        "ytick.labelsize": 8.2,
+        "legend.fontsize": 7.6,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "figure.dpi": 150,
@@ -54,9 +53,9 @@ def make_fig1(p2c_sum):
     ax1.errorbar(x + 0.04, pcl_m, yerr=pcl_sd, marker="s", lw=2.0, capsize=4, color="#d62728", label="PCL (λ = 0.5)")
 
     for xi, ym, ys in zip(x, erm_m, erm_sd):
-        ax1.annotate(f"{ym:.3f}", (xi - 0.04, ym + ys + 0.008), ha="center", fontsize=8, color="#1f77b4", fontweight="bold")
+        ax1.annotate(f"{ym:.3f}", (xi - 0.04, ym + ys + 0.007), ha="center", fontsize=8, color="#1f77b4", fontweight="bold")
     for xi, ym, ys in zip(x, pcl_m, pcl_sd):
-        ax1.annotate(f"{ym:.3f}", (xi + 0.04, ym - ys - 0.016), ha="center", fontsize=8, color="#d62728", fontweight="bold")
+        ax1.annotate(f"{ym:.3f}", (xi + 0.04, ym - ys - 0.015), ha="center", fontsize=8, color="#d62728", fontweight="bold")
 
     scratch_m = srows["Supervised Scratch"]["site_b_auroc"]["mean"]
     ax1.axhline(scratch_m, ls="--", lw=1.2, color="#555555", label=f"Supervised Scratch ({scratch_m:.3f})")
@@ -94,8 +93,8 @@ def make_fig1(p2c_sum):
     ax2.set_yticks(y)
     ax2.set_yticklabels(labels)
     ax2.set_xlim(0.54, 0.77)
-    ax2.set_xlabel("Site B OOD Sepsis AUROC (± SD across 5 seeds)")
-    ax2.set_title("B. Constraint, Placebo & Anti-Collapse Ablations (10k)")
+    ax2.set_xlabel("Site B Sepsis AUROC (± SD across 5 seeds)")
+    ax2.set_title("B. Constraint, Placebo & VICReg Ablations (10k)")
     ax2.grid(axis="x", alpha=0.25)
 
     fig.tight_layout()
@@ -104,82 +103,96 @@ def make_fig1(p2c_sum):
     plt.close(fig)
 
 
-def make_fig2(wk_sum):
+def make_fig2(wk_sum, p2c_sum, gcos_sum):
     sw = wk_sum["lambda_sweep"]
     rows = sw["by_lambda"]
     boot_by_c = sw["site_b_patient_bootstrap"]["by_condition"]
+    g_rows = {r["lambda"]: r for r in gcos_sum["by_lambda"]}
 
     lams = [r["lambda"] for r in rows]
     x = np.arange(len(lams))
     x_labels = [f"{l:g}" for l in lams]
 
-    gnorms = [r["final_grad_norm_mean"] for r in rows]
-    shares = [100.0 * r["mean_pcl_share_mean"] for r in rows]
-    l2s = [r["l2_h47_mean"] for r in rows]
-    spreads = [r["spread_h47_mean"] for r in rows]
+    # Non-zero lambdas for log gradient ratio
+    lams_nz = [l for l in lams if l > 0]
+    x_nz = np.arange(len(lams_nz))
+    ratios = [g_rows[l]["eff_grad_ratio_mean"] for l in lams_nz]
+    cos_vals = [g_rows[l]["cos_enc_mean"] for l in lams_nz]
+
     aurocs = [r["site_b_auroc_mean"] for r in rows]
     boot_lo = [aurocs[i] - boot_by_c[f"lam={l:g}"]["boot_ci_95"][0] for i, l in enumerate(lams)]
     boot_hi = [boot_by_c[f"lam={l:g}"]["boot_ci_95"][1] - aurocs[i] for i, l in enumerate(lams)]
 
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(11.5, 3.5))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(11.6, 3.5))
 
-    # Panel A: Grad Norm & PCL Loss Share
+    # Panel A: Pure Gradient-Scale Dominance & Near-Orthogonal Cosine
     c1, c2 = "#d62728", "#1f77b4"
-    ax1.plot(x, gnorms, marker="o", lw=2.0, color=c1, label="Final Grad Norm")
-    ax1.axhline(1.0, ls=":", lw=1.1, color=c1, alpha=0.7, label="Clip Norm = 1.0")
+    ax1.plot(x_nz, ratios, marker="o", lw=2.0, color=c1, label="||∇(λL_pcl)|| / ||∇L_mask||")
+    ax1.axhline(1.0, ls=":", lw=1.1, color=c1, alpha=0.7, label="Equal Gradient Scale (1×)")
     ax1.set_yscale("log")
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(x_labels)
-    ax1.set_xlabel("Constraint Weight λ")
-    ax1.set_ylabel("Pretrain Grad Norm (log)", color=c1)
+    ax1.set_xticks(x_nz)
+    ax1.set_xticklabels([f"{l:g}" for l in lams_nz])
+    ax1.set_xlabel("Constraint Weight λ > 0")
+    ax1.set_ylabel("Gradient Norm Ratio (log)", color=c1)
     ax1.tick_params(axis="y", labelcolor=c1)
-    ax1.set_title("A. Gradient Spike & Loss Share")
+    ax1.set_ylim(0.1, 450)
+    ax1.set_title("A. Gradient-Scale Dominance (cos ≈ 0)")
     ax1.grid(axis="y", alpha=0.25)
 
     ax1_r = ax1.twinx()
     ax1_r.spines["top"].set_visible(False)
-    ax1_r.plot(x, shares, marker="s", ls="--", lw=1.8, color=c2, label="PCL Loss Share (%)")
-    ax1_r.set_ylabel("Avg PCL Loss Share (%)", color=c2)
+    ax1_r.plot(x_nz, cos_vals, marker="s", ls="--", lw=1.7, color=c2, label="Encoder Grad Cosine")
+    ax1_r.axhline(0.0, ls="-.", lw=0.9, color=c2, alpha=0.45)
+    ax1_r.set_ylabel("cos(∇L_mask, ∇L_pcl)", color=c2)
     ax1_r.tick_params(axis="y", labelcolor=c2)
-    ax1_r.set_ylim(-2, 52)
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax1_r.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left", fontsize=7.5, frameon=True)
+    ax1_r.set_ylim(-0.35, 0.35)
+    l1, lb1 = ax1.get_legend_handles_labels()
+    l2, lb2 = ax1_r.get_legend_handles_labels()
+    ax1.legend(l1 + l2, lb1 + lb2, loc="upper left", fontsize=7.0, frameon=True)
 
-    # Panel B: Representation Geometry
-    c3, c4 = "#9467bd", "#2ca02c"
-    ax2.plot(x, l2s, marker="^", lw=2.0, color=c3, label="Mean L2 Norm (h47)")
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(x_labels)
-    ax2.set_xlabel("Constraint Weight λ")
-    ax2.set_ylabel("Mean L2 Norm (h47)", color=c3)
-    ax2.tick_params(axis="y", labelcolor=c3)
-    ax2.set_title("B. Representation Geometry")
-    ax2.grid(axis="y", alpha=0.25)
+    # Panel B: Norm vs Transfer across ALL Phase 2c arms (disproving naive norm causality)
+    srows = p2c_sum["summary_rows"]
+    pts_x, pts_y, pts_lbl, pts_clr = [], [], [], []
+    arm_meta = [
+        ("ERM Clean (10k)", "ERM 10k", "#1f77b4", (6, 4)),
+        ("ERM Matched-Vol (25k)", "ERM 25k", "#1f77b4", (6, 3)),
+        ("ERM Matched-Vol (80k)", "ERM 80k", "#1f77b4", (6, -2)),
+        ("PCL Clean (10k)", "PCL 10k", "#d62728", (7, -3)),
+        ("PCL Matched-Vol (25k)", "PCL 25k", "#d62728", (5, -9)),
+        ("PCL Matched-Vol (80k)", "PCL 80k", "#d62728", (-38, 6)),
+        ("PCL + VICReg (10k)", "VICReg", "#e377c2", (6, 3)),
+        ("PCL Placebo (10k)", "Placebo", "#9467bd", (-36, -10)),
+        ("PCL MAP-Only (10k)", "MAP", "#ff7f0e", (-32, 4)),
+        ("PCL No-HH (10k)", "No-HH", "#ff7f0e", (7, 4)),
+    ]
+    for key, short, clr, offset in arm_meta:
+        l2 = srows[key]["l2_norm"]["mean"]
+        auroc = srows[key]["site_b_auroc"]["mean"]
+        ax2.scatter([l2], [auroc], color=clr, s=48, edgecolor="black", linewidth=0.6, zorder=4)
+        ax2.annotate(short, (l2, auroc), xytext=offset, textcoords="offset points", fontsize=7.2, color=clr, fontweight="bold")
+        pts_x.append(l2); pts_y.append(auroc)
+    ax2.set_xlabel("Hour-47 Representation L2 Norm")
+    ax2.set_ylabel("Site B Sepsis AUROC (n = 5)")
+    ax2.set_xlim(40, 315)
+    ax2.set_ylim(0.595, 0.775)
+    ax2.set_title("B. Representation Norm Does Not Predict Transfer")
+    ax2.grid(alpha=0.25)
 
-    ax2_r = ax2.twinx()
-    ax2_r.spines["top"].set_visible(False)
-    ax2_r.plot(x, spreads, marker="D", ls="--", lw=1.8, color=c4, label="Across-Stay Spread")
-    ax2_r.set_ylabel("Normalized Spread (h47)", color=c4)
-    ax2_r.tick_params(axis="y", labelcolor=c4)
-    l2_lines, l2_labels = ax2.get_legend_handles_labels()
-    sp_lines, sp_labels = ax2_r.get_legend_handles_labels()
-    ax2.legend(l2_lines + sp_lines, l2_labels + sp_labels, loc="upper center", fontsize=7.5, frameon=True)
-
-    # Panel C: Downstream Sepsis Site B AUROC + Patient Bootstrap CIs
+    # Panel C: Downstream Sepsis Site B AUROC vs Lambda + Source-Val Tuned PCL
     ax3.errorbar(x, aurocs, yerr=[boot_lo, boot_hi], marker="o", lw=2.0, capsize=4, color="#1f77b4", label="Mean ± 95% Patient CI")
     ax3.axhline(aurocs[0], ls="--", lw=1.1, color="#555555", label=f"ERM Baseline ({aurocs[0]:.3f})")
-    ax3.axvspan(3.5, 5.4, color="#d62728", alpha=0.08, label="High-Penalty Regime")
+    ax3.axhline(0.6792, ls=":", lw=1.3, color="#ff7f0e", label="Val-Tuned PCL (0.679)")
+    ax3.axvspan(3.5, 5.4, color="#d62728", alpha=0.08, label="High-λ Regime (≥0.5)")
     for xi, ym, hi in zip(x, aurocs, boot_hi):
-        ax3.annotate(f"{ym:.3f}", (xi, ym + hi + 0.005), ha="center", fontsize=7.5)
+        ax3.annotate(f"{ym:.3f}", (xi, ym + hi + 0.004), ha="center", fontsize=7.5)
     ax3.set_xticks(x)
     ax3.set_xticklabels(x_labels)
     ax3.set_xlabel("Constraint Weight λ")
-    ax3.set_ylabel("Site B OOD Sepsis AUROC")
+    ax3.set_ylabel("Site B Sepsis AUROC (n = 3)")
     ax3.set_ylim(0.555, 0.775)
     ax3.set_title("C. Site B Sepsis Transfer vs λ")
     ax3.grid(axis="y", alpha=0.25)
-    ax3.legend(loc="lower left", fontsize=7.3, frameon=True)
+    ax3.legend(loc="lower left", fontsize=7.0, frameon=True)
 
     fig.tight_layout()
     for ext in ("pdf", "png"):
@@ -191,7 +204,6 @@ def make_fig3(wk_sum, mort_sum, gbm_sum):
     hp_rows = {(r["tag"], r["head_mode"]): r for r in wk_sum["head_pilot"]["rows"]}
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.6), gridspec_kw={"width_ratios": [1.0, 1.1]})
 
-    # Panel A: Head Pilot (T=24 Sepsis)
     modes = ["baseline", "layernorm", "lpft"]
     mode_labels = ["Baseline\n(Unnorm.)", "LayerNorm\nHead", "LP-FT\n(LN + 1e-5)"]
     x = np.arange(len(modes))
@@ -216,12 +228,11 @@ def make_fig3(wk_sum, mort_sum, gbm_sum):
     ax1.set_xticks(x)
     ax1.set_xticklabels(mode_labels)
     ax1.set_ylim(0.50, 0.70)
-    ax1.set_ylabel("Site B OOD AUROC (T=24 Protocol)")
-    ax1.set_title("A. Head Conditioning Stops Collapse, Not Deficit")
+    ax1.set_ylabel("Site B AUROC (T=24 Protocol)")
+    ax1.set_title("A. Exploratory Head Conditioning Pilot (T=24, n=3)")
     ax1.grid(axis="y", alpha=0.25)
     ax1.legend(loc="lower right", frameon=True)
 
-    # Panel B: Fixed T=48 Mortality Transformer vs HistGBM
     mort_m = mort_sum["methods"]
     dirs = ["MIMIC->eICU", "eICU->MIMIC"]
     x2 = np.arange(len(dirs))
@@ -245,8 +256,8 @@ def make_fig3(wk_sum, mort_sum, gbm_sum):
     ax2.set_xticks(x2)
     ax2.set_xticklabels(["MIMIC-IV → eICU-CRD", "eICU-CRD → MIMIC-IV"])
     ax2.set_ylim(0.45, 0.92)
-    ax2.set_ylabel("Fixed T=48 OOD Mortality AUROC")
-    ax2.set_title("B. Fixed T=48 Mortality: Neural Ceiling & PCL Fragility")
+    ax2.set_ylabel("Fixed T=48 Mortality AUROC")
+    ax2.set_title("B. Fixed T=48 Mortality: Neural Ceiling & PCL Collapses")
     ax2.grid(axis="y", alpha=0.25)
     ax2.legend(loc="lower right", frameon=True)
 
@@ -263,9 +274,10 @@ def main():
     wk_sum = json.load(open(os.path.join(_REV, "workshop_new_runs_summary.json")))
     mort_sum = json.load(open(os.path.join(_REV, "fixedT48_mortality_summary.json")))
     gbm_sum = json.load(open(os.path.join(_REV, "verified_gbm_baselines.json")))
+    gcos_sum = json.load(open(os.path.join(_REV, "grad_cosine_sweep.json")))
 
     make_fig1(p2c_sum)
-    make_fig2(wk_sum)
+    make_fig2(wk_sum, p2c_sum, gcos_sum)
     make_fig3(wk_sum, mort_sum, gbm_sum)
     print(f"Generated 3 figures (PDF + PNG) in {_OUT}")
 

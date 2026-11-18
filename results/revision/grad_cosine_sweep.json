@@ -1,0 +1,58 @@
+{
+  "by_lambda": [
+    {
+      "lambda": 0.0,
+      "n_measurements": 15,
+      "cos_enc_mean": 0.26372372534934785,
+      "cos_enc_sd": 0.042979517174541855,
+      "grad_norm_masked_mean": 0.011399469586710136,
+      "grad_norm_pcl_raw_mean": 0.7758149643739064,
+      "eff_grad_ratio_mean": 0.0
+    },
+    {
+      "lambda": 0.01,
+      "n_measurements": 15,
+      "cos_enc_mean": 0.0011760465213517903,
+      "cos_enc_sd": 0.03253815868699927,
+      "grad_norm_masked_mean": 0.010945683841904004,
+      "grad_norm_pcl_raw_mean": 0.20131473417083423,
+      "eff_grad_ratio_mean": 0.25293808650866917
+    },
+    {
+      "lambda": 0.05,
+      "n_measurements": 15,
+      "cos_enc_mean": -0.018026666368382852,
+      "cos_enc_sd": 0.0406216292398722,
+      "grad_norm_masked_mean": 0.008513845348109802,
+      "grad_norm_pcl_raw_mean": 0.14207708537578584,
+      "eff_grad_ratio_mean": 2.19953440733508
+    },
+    {
+      "lambda": 0.1,
+      "n_measurements": 15,
+      "cos_enc_mean": 0.0061565596111295695,
+      "cos_enc_sd": 0.04887158987959372,
+      "grad_norm_masked_mean": 0.006392477685585618,
+      "grad_norm_pcl_raw_mean": 0.12356906533241271,
+      "eff_grad_ratio_mean": 8.81218443344728
+    },
+    {
+      "lambda": 0.5,
+      "n_measurements": 15,
+      "cos_enc_mean": -0.022905904475229444,
+      "cos_enc_sd": 0.06420878525747074,
+      "grad_norm_masked_mean": 0.002407256606966257,
+      "grad_norm_pcl_raw_mean": 0.09119721328218779,
+      "eff_grad_ratio_mean": 60.16243135752016
+    },
+    {
+      "lambda": 1.0,
+      "n_measurements": 15,
+      "cos_enc_mean": 0.0018084003068956115,
+      "cos_enc_sd": 0.08276776105046181,
+      "grad_norm_masked_mean": 0.0024868694366887213,
+      "grad_norm_pcl_raw_mean": 0.14095791727304458,
+      "eff_grad_ratio_mean": 164.75321448812477
+    }
+  ]
+}
